@@ -54,48 +54,29 @@ strings; a drop below 100% usually means a new field arrived without one.
 KAN-20, with the reasoning in `docs/ARCHITECTURE.md`. The `serve` package is
 not used; nginx covers both jobs and Node stays a build-time dependency only.
 
-Build with the API path set to a **relative** `/api`:
-
 ```bash
-VITE_API_URL=/api npm run build
+npm ci
+npm run build
+sudo cp -r dist /opt/job-tracker-frontend/
+
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/job-tracker
+sudo ln -s /etc/nginx/sites-available/job-tracker /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Vite inlines env vars at build time. An absolute origin here would bake the
-server's IP into the bundle, so changing the machine's address would mean
-rebuilding — `/api` avoids that entirely.
+**No `VITE_API_URL` on the command line.** `.env.production` is committed and
+sets it to the relative `/api`; `vite build` loads that automatically. Leaving
+it to a remembered variable is how a build silently falls back to
+`http://localhost:8000` — which then fails only on the phone, not on the
+machine you built it on. `vite` in development does not load that file, so dev
+still targets `localhost:8000`.
 
-Copy `dist/` to `/opt/job-tracker-frontend/dist`, then:
+The nginx config lives in [`deploy/nginx.conf`](deploy/nginx.conf) rather than
+in this README, so the `try_files` line is under version control where a
+careless edit shows up in a diff. Only `server_name` should need changing.
 
-```nginx
-server {
-    listen 80;
-    server_name your-machine-hostname-or-ip;
-
-    root /opt/job-tracker-frontend/dist;
-    index index.html;
-
-    # SPA fallback. Client-side routing means a cold request for
-    # /applications/10 — a bookmark, a refresh, a shared link — asks for a path
-    # with no file on disk. Without this, deep links 404 in production while
-    # working perfectly in the dev server.
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # The trailing slash on proxy_pass strips the /api prefix, so
-    # /api/applications reaches the backend as /applications and the FastAPI
-    # routes need no root_path.
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Reload nginx. The backend listens on `127.0.0.1:8000` and is not reachable from
-the LAN except through here.
+The backend listens on `127.0.0.1:8000` and is not reachable from the LAN
+except through here.
 
 ### Verifying the fallback
 
