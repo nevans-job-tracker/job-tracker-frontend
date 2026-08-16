@@ -12,33 +12,60 @@ const emptyForm = {
   salary_max: "",
   salary_currency: "USD",
   date_applied: new Date().toISOString().slice(0, 10),
+  next_action: "",
+  next_action_date: "",
   notes: "",
+  job_description: "",
 };
 
-export default function ApplicationForm({ initial, onSubmit, onCancel }) {
-  const [form, setForm] = useState(initial ? { ...emptyForm, ...initial } : emptyForm);
+// Only these are sent to the API. Picking explicitly keeps server-managed
+// fields (id, created_at, contacts, ...) out of the payload.
+function toForm(initial) {
+  if (!initial) return emptyForm;
+  const form = { ...emptyForm };
+  for (const key of Object.keys(emptyForm)) {
+    if (initial[key] !== null && initial[key] !== undefined) {
+      form[key] = initial[key];
+    }
+  }
+  return form;
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+export default function ApplicationForm({ initial, onSubmit, onCancel, submitLabel }) {
+  const [form, setForm] = useState(() => toForm(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // A future date is usually a typo — a mistyped year sorts to the top of the
+  // list and stays there. It is still legitimate when logging something about
+  // to be submitted, so this warns rather than blocking. See REQUIREMENTS.md §2.
+  const dateIsInFuture = Boolean(form.date_applied) && form.date_applied > today();
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  const blankToNull = (v) => (v === "" ? null : v);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      const payload = {
+      await onSubmit({
         ...form,
         salary_min: form.salary_min === "" ? null : Number(form.salary_min),
         salary_max: form.salary_max === "" ? null : Number(form.salary_max),
-        job_link: form.job_link || null,
-        source: form.source || null,
-        location: form.location || null,
-        notes: form.notes || null,
-      };
-      await onSubmit(payload);
+        job_link: blankToNull(form.job_link),
+        source: blankToNull(form.source),
+        location: blankToNull(form.location),
+        next_action: blankToNull(form.next_action),
+        next_action_date: blankToNull(form.next_action_date),
+        notes: blankToNull(form.notes),
+        job_description: blankToNull(form.job_description),
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -143,6 +170,29 @@ export default function ApplicationForm({ initial, onSubmit, onCancel }) {
             type="date"
             value={form.date_applied}
             onChange={(e) => update("date_applied", e.target.value)}
+            aria-describedby={dateIsInFuture ? "date-applied-warning" : undefined}
+          />
+          {dateIsInFuture && (
+            <span className="form-warning" id="date-applied-warning">
+              That date is in the future — check the year if it was a typo. You
+              can still save it.
+            </span>
+          )}
+        </label>
+        <label>
+          Next action
+          <input
+            placeholder="Follow up with recruiter"
+            value={form.next_action}
+            onChange={(e) => update("next_action", e.target.value)}
+          />
+        </label>
+        <label>
+          Next action date
+          <input
+            type="date"
+            value={form.next_action_date}
+            onChange={(e) => update("next_action_date", e.target.value)}
           />
         </label>
       </div>
@@ -156,12 +206,22 @@ export default function ApplicationForm({ initial, onSubmit, onCancel }) {
         />
       </label>
 
+      <label className="form-notes">
+        Job description
+        <textarea
+          rows={6}
+          placeholder="Paste the posting here — it outlives the link once the ad comes down."
+          value={form.job_description}
+          onChange={(e) => update("job_description", e.target.value)}
+        />
+      </label>
+
       <div className="form-actions">
         <button type="button" onClick={onCancel} disabled={saving}>
           Cancel
         </button>
         <button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving..." : submitLabel || "Save"}
         </button>
       </div>
     </form>

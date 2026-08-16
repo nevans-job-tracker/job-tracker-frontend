@@ -14,8 +14,7 @@ function formatSalary(app) {
 
 export default function ApplicationList({
   applications,
-  onEdit,
-  onDelete,
+  onOpen,
   sortBy,
   sortDir,
   onSortChange,
@@ -42,41 +41,60 @@ export default function ApplicationList({
       <thead>
         <tr>
           <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
-          <th onClick={() => headerClick("role_title")}>Role{arrow("role_title")}</th>
-          <th>Location</th>
+          <th className="col-wide" onClick={() => headerClick("role_title")}>
+            Role{arrow("role_title")}
+          </th>
+          <th className="col-wide" onClick={() => headerClick("location")}>
+            Location{arrow("location")}
+          </th>
+          <th className="col-wide" onClick={() => headerClick("source")}>
+            Source{arrow("source")}
+          </th>
           <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
-          <th>Salary</th>
-          <th onClick={() => headerClick("date_applied")}>Applied{arrow("date_applied")}</th>
-          <th>Link</th>
-          <th></th>
+          <th className="col-wide">Salary</th>
+          <th onClick={() => headerClick("next_action_date")}>
+            Next action{arrow("next_action_date")}
+          </th>
+          <th onClick={() => headerClick("date_applied")}>
+            Applied{arrow("date_applied")}
+          </th>
         </tr>
       </thead>
       <tbody>
         {applications.map((app) => (
-          <tr key={app.id}>
+          <tr
+            key={app.id}
+            className="row-clickable"
+            tabIndex={0}
+            onClick={() => onOpen(app)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen(app);
+              }
+            }}
+          >
             <td>{app.company}</td>
-            <td>{app.role_title}</td>
-            <td>{app.location || "—"}</td>
+            <td className="col-wide">{app.role_title}</td>
+            <td className="col-wide">{app.location || "—"}</td>
+            <td className="col-wide">{app.source || "—"}</td>
             <td>
               <StatusBadge status={app.status} />
             </td>
-            <td>{formatSalary(app)}</td>
-            <td>{app.date_applied}</td>
+            <td className="col-wide">{formatSalary(app)}</td>
             <td>
-              {app.job_link ? (
-                <a href={app.job_link} target="_blank" rel="noreferrer">
-                  Posting
-                </a>
+              {app.next_action ? (
+                <>
+                  {app.next_action}
+                  {app.next_action_date && (
+                    <span className="cell-sub">{app.next_action_date}</span>
+                  )}
+                </>
               ) : (
                 "—"
               )}
             </td>
-            <td className="row-actions">
-              <button onClick={() => onEdit(app)}>Edit</button>
-              <button className="danger" onClick={() => onDelete(app)}>
-                Delete
-              </button>
-            </td>
+            <td>{app.date_applied}</td>
           </tr>
         ))}
       </tbody>

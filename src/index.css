@@ -119,10 +119,115 @@ textarea {
   margin-top: 16px;
 }
 
+/* Columns hidden on narrow screens. The target mobile device is an iPhone 17
+   Pro: 402px wide in portrait, 874px in landscape. The breakpoint sits above
+   874 so the phone counts as narrow in both orientations. The rest of the
+   responsive column set is planned under KAN-12. */
+@media (max-width: 900px) {
+  .app-table .col-wide {
+    display: none;
+  }
+}
+
 .empty-state {
   text-align: center;
   color: #6b7280;
   padding: 40px 0;
+}
+
+.row-clickable {
+  cursor: pointer;
+}
+
+.row-clickable:hover {
+  background: #f9fafb;
+}
+
+.row-clickable:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.cell-sub {
+  display: block;
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+.back-link {
+  display: inline-block;
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.saved-flag {
+  color: #065f46;
+  background: #d1fae5;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.contacts {
+  margin-top: 28px;
+}
+
+.contacts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.contacts-header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.contact-card {
+  background: white;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.contact-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.contact-actions button {
+  margin-left: 6px;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.contact-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+}
+
+.contact-details dt {
+  color: #6b7280;
+}
+
+.contact-details dd {
+  margin: 0;
+}
+
+.danger-zone {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .app-form {
@@ -158,6 +263,15 @@ textarea {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+
+.form-warning {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 .form-error {

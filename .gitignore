@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output — built on deploy, not versioned
+dist/
+
+# Test and coverage artifacts
+coverage/
+test-results/
+
+# Environment — .env.example is committed, real .env is not
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

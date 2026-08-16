@@ -21,11 +21,39 @@ npm run build
 
 Outputs static files to `dist/`.
 
-## 3. Deploy on your Linux machine
+## 3. Tests
 
-You just need something to serve the static `dist/` folder. Two easy options:
+```bash
+npm test          # single run, with coverage
+npm run test:watch
+```
+
+Vitest + Testing Library, running in jsdom. Covers routing, the API client, both
+page components (URL state, pagination, create/save/delete flows), the list
+table, the application form, and the contacts editor.
+
+Every run writes two browsable reports:
+
+- `coverage/index.html` — line-by-line coverage
+- `test-results/index.html` — which tests ran and passed
+
+Both are generated output and should be gitignored.
+
+Coverage is ~99% of statements.
+
+## 4. Deploy on your Linux machine
+
+You just need something to serve the static `dist/` folder — **with SPA fallback**.
+
+The app uses client-side routing, so a direct request for `/applications/10`
+(a bookmark, a refresh, or a shared link) asks the server for a path that has no
+file on disk. Unknown paths must be rewritten to `index.html`, or deep links
+404 in production while working perfectly in the dev server. Both options below
+already do this; don't drop it if you swap in something else.
 
 ### Option A: nginx
+
+The `try_files $uri /index.html;` line below is what provides the SPA fallback.
 
 ```nginx
 server {
@@ -44,6 +72,8 @@ server {
 Build, copy `dist/` to `/opt/job-tracker-frontend/dist`, reload nginx.
 
 ### Option B: `serve` (no nginx needed)
+
+The `-s` flag is what provides the SPA fallback.
 
 ```bash
 npm install -g serve
