@@ -229,7 +229,12 @@ describe("ListPage", () => {
     it("asks for the next page by offset", async () => {
       setup({ total: 120, items: page(1) });
       await screen.findByText("Company 01");
+
+      // Must return the *second* page: without this the first page is appended
+      // to itself, and every row id collides on React's key.
+      listApplications.mockResolvedValue({ total: 120, items: page(51) });
       await userEvent.click(screen.getByRole("button", { name: /load more/i }));
+
       await waitFor(() => expect(lastQuery()).toMatchObject({ skip: 50, limit: 50 }));
     });
 
