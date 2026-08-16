@@ -201,4 +201,34 @@ describe("ContactsEditor", () => {
       );
     });
   });
+
+  describe("field wiring", () => {
+    // ContactFields spreads a different literal key per input. The add and
+    // edit flows above cover the surrounding mechanism; nothing checks the key
+    // names themselves, and a wrong one drops the value without complaint.
+    //
+    // Rendered with no existing contacts so the add form holds the only copy
+    // of these labels.
+    it.each([
+      [/^name/i, "name", "Dana Wu"],
+      [/^title$/i, "title", "Hiring Manager"],
+      [/^phone$/i, "phone", "+1 555-0199"],
+      [/^email$/i, "email", "dana@acme.example"],
+      [/^notes$/i, "notes", "Prefers email to phone"],
+    ])("%s is sent as %s", async (label, key, value) => {
+      setup([]);
+      await userEvent.click(screen.getByRole("button", { name: /add contact/i }));
+      // Name is required; for the name case it is also the field under test.
+      if (key !== "name") {
+        await userEvent.type(screen.getByLabelText(/^name/i), "Dana Wu");
+      }
+      await userEvent.type(screen.getByLabelText(label), value);
+      await userEvent.click(screen.getByRole("button", { name: /^add contact$/i }));
+
+      expect(createContact).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ [key]: value })
+      );
+    });
+  });
 });

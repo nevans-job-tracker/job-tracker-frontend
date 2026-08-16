@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ApplicationForm from "./ApplicationForm.jsx";
 
@@ -107,6 +107,39 @@ describe("ApplicationForm", () => {
       expect(payload.company).toBe("Northwind Traders");
       expect(payload.location).toBe("Austin, TX");
       expect(payload.status).toBe("interview");
+    });
+  });
+
+  describe("field wiring", () => {
+    // update() is covered by the tests above, but every input hard-codes its
+    // own field name and nothing else checks those strings. A mistyped key
+    // writes to a property the payload never reads, so the value is silently
+    // dropped on save — the form still looks like it worked.
+    //
+    // fireEvent.change rather than userEvent.type so date and number inputs
+    // take a value the same way text ones do; what's under test is the wiring,
+    // not the typing.
+    const fill = (label, value) =>
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
+    it.each([
+      [/job link/i, "job_link", "https://example.com/job", "https://example.com/job"],
+      [/^source$/i, "source", "LinkedIn", "LinkedIn"],
+      [/^location$/i, "location", "Austin, TX", "Austin, TX"],
+      [/salary max/i, "salary_max", "120000", 120000],
+      [/currency/i, "salary_currency", "GBP", "GBP"],
+      [/^next action$/i, "next_action", "Follow up", "Follow up"],
+      [/next action date/i, "next_action_date", "2026-09-01", "2026-09-01"],
+      [/^notes$/i, "notes", "Spoke to the recruiter", "Spoke to the recruiter"],
+      [/job description/i, "job_description", "Pasted posting", "Pasted posting"],
+    ])("%s is submitted as %s", async (label, key, entered, expected) => {
+      const { onSubmit } = setup();
+      fill(/company/i, "Acme Corp");
+      fill(/role title/i, "QA Engineer");
+      fill(label, entered);
+      await submit();
+
+      expect(onSubmit.mock.calls[0][0][key]).toEqual(expected);
     });
   });
 

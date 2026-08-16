@@ -104,6 +104,29 @@ describe("ApplicationList", () => {
       await userEvent.click(screen.getByText(/^Next action/));
       expect(onSortChange).toHaveBeenCalledWith("next_action_date", "asc");
     });
+
+    // headerClick's logic is covered above, but each header hard-codes its own
+    // column key and nothing else checks those strings. A wrong one reaches
+    // the API as an unrecognised sort_by, so the header quietly stops working
+    // rather than failing loudly. Every key here must stay in the backend's
+    // sort_by pattern — see app/routers/applications.py.
+    it.each([
+      ["Company", "company"],
+      ["Role", "role_title"],
+      ["Location", "location"],
+      ["Source", "source"],
+      ["Status", "status"],
+      ["Next action", "next_action_date"],
+      ["Applied", "date_applied"],
+    ])("the %s header sorts by %s", async (label, column) => {
+      const { onSortChange } = setup();
+      // By role, not text: "Applied" is also a status badge in the body.
+      const th = screen
+        .getAllByRole("columnheader")
+        .find((h) => h.textContent.startsWith(label));
+      await userEvent.click(th);
+      expect(onSortChange).toHaveBeenCalledWith(column, "asc");
+    });
   });
 
   describe("responsive columns", () => {
