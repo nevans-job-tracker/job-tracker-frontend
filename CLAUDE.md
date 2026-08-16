@@ -41,13 +41,22 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
 - **Mobile matters.** The app is used from a phone on the LAN, so responsive
   layout is a requirement, not a nicety.
 
-## Deployment note
+## Deployment
 
-Client-side routing means the static server **must** rewrite unknown paths to
-`index.html`, or deep links like `/applications/10` 404 in production while
-working fine in the dev server. Both candidates in the README already do this
-(nginx `try_files`, `serve -s`); the constraint is not to lose it when the
-serving stack is chosen under KAN-14.
+**Decided (KAN-20): nginx serves `dist/` and proxies `/api/` to the backend on
+`127.0.0.1:8000`** — one origin for both. See `docs/ARCHITECTURE.md`.
+
+Two consequences for this repo:
+
+- **`VITE_API_URL=/api`** in the deployed build — a relative path. Vite inlines
+  it at build time, so an absolute origin would bake the server's IP into the
+  bundle and an address change would mean rebuilding. `/api` does not.
+  Unset in development, where it falls back to `http://localhost:8000`.
+- **Client-side routing needs the static server to rewrite unknown paths to
+  `index.html`**, or deep links like `/applications/10` 404 in production while
+  working fine in the dev server. nginx does this with
+  `try_files $uri $uri/ /index.html`. Clicking around will not catch a
+  regression here — only a cold load of a deep URL will.
 
 ## Testing
 

@@ -50,17 +50,21 @@ strings; a drop below 100% usually means a new field arrived without one.
 
 ## 4. Deploy on your Linux machine
 
-You just need something to serve the static `dist/` folder — **with SPA fallback**.
+**nginx serves `dist/` and proxies the API on the same origin** — decided in
+KAN-20, with the reasoning in `docs/ARCHITECTURE.md`. The `serve` package is
+not used; nginx covers both jobs and Node stays a build-time dependency only.
 
-The app uses client-side routing, so a direct request for `/applications/10`
-(a bookmark, a refresh, or a shared link) asks the server for a path that has no
-file on disk. Unknown paths must be rewritten to `index.html`, or deep links
-404 in production while working perfectly in the dev server. Both options below
-already do this; don't drop it if you swap in something else.
+Build with the API path set to a **relative** `/api`:
 
-### Option A: nginx
+```bash
+VITE_API_URL=/api npm run build
+```
 
-The `try_files $uri /index.html;` line below is what provides the SPA fallback.
+Vite inlines env vars at build time. An absolute origin here would bake the
+server's IP into the bundle, so changing the machine's address would mean
+rebuilding — `/api` avoids that entirely.
+
+Copy `dist/` to `/opt/job-tracker-frontend/dist`, then:
 
 ```nginx
 server {
@@ -70,40 +74,44 @@ server {
     root /opt/job-tracker-frontend/dist;
     index index.html;
 
+    # SPA fallback. Client-side routing means a cold request for
+    # /applications/10 — a bookmark, a refresh, a shared link — asks for a path
+    # with no file on disk. Without this, deep links 404 in production while
+    # working perfectly in the dev server.
     location / {
-        try_files $uri /index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # The trailing slash on proxy_pass strips the /api prefix, so
+    # /api/applications reaches the backend as /applications and the FastAPI
+    # routes need no root_path.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-Build, copy `dist/` to `/opt/job-tracker-frontend/dist`, reload nginx.
+Reload nginx. The backend listens on `127.0.0.1:8000` and is not reachable from
+the LAN except through here.
 
-### Option B: `serve` (no nginx needed)
+### Verifying the fallback
 
-The `-s` flag is what provides the SPA fallback.
+Clicking from the list to a detail screen proves nothing — the router handles
+that in the browser and no request is made. Test it cold:
 
-```bash
-npm install -g serve
-serve -s dist -l 5173
-```
+- paste `/applications/<id>` into a fresh tab
+- reload while on a detail screen
+- open a detail URL from a bookmark
 
-Wrap that in a systemd unit if you want it to survive reboots:
+All three must render the app rather than a 404.
 
-```ini
-[Unit]
-Description=Job Tracker frontend
-After=network.target
+## 5. CORS
 
-[Service]
-WorkingDirectory=/opt/job-tracker-frontend
-ExecStart=/usr/bin/serve -s dist -l 5173
-Restart=on-failure
+**Not needed for the deployed setup.** Everything is same-origin behind nginx,
+so `CORS_ORIGINS` is not exercised.
 
-[Install]
-WantedBy=multi-user.target
-```
-
-## 4. Remember
-
-Whatever origin this ends up served from (e.g. `http://192.168.1.50` or
-`http://192.168.1.50:5173`), add it to `CORS_ORIGINS` in the backend's `.env`.
+It still applies in development, where Vite serves on `:5173` and the API
+answers on `:8000` — two origins. The backend's default already covers that.
