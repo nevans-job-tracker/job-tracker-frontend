@@ -37,9 +37,16 @@ Every run writes two browsable reports:
 - `coverage/index.html` — line-by-line coverage
 - `test-results/index.html` — which tests ran and passed
 
-Both are generated output and should be gitignored.
+Both are generated output, and both are gitignored.
 
-Coverage is ~99% of statements.
+137 tests: 99% of statements and 100% of functions.
+
+Function coverage is worth holding at 100%. Most of the handlers here are
+inline arrows that pass a field name to a shared helper — the helper is well
+covered, so a mistyped name is invisible to every other test, and the value it
+writes is silently dropped on save. The parametrised wiring tests in
+`ApplicationForm`, `ApplicationList`, and `ContactsEditor` exist to pin those
+strings; a drop below 100% usually means a new field arrived without one.
 
 ## 4. Deploy on your Linux machine
 

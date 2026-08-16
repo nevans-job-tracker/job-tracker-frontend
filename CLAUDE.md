@@ -52,5 +52,5 @@ serving stack is chosen under KAN-14.
 ## Testing
 
 ```bash
-npm test      # 116 tests, ~99% coverage
+npm test      # 137 tests, 99% statements, 100% functions
 ```
