@@ -60,14 +60,21 @@ button.danger:hover {
   padding: 4px 8px;
 }
 
+/* Wraps rather than overflowing. Without flex-wrap the three controls are
+   forced onto one line at any width and the Active/Archived/All select is
+   clipped off the right edge in portrait (KAN-28). */
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 12px;
 }
 
 .search-input {
-  flex: 1;
+  /* Basis rather than flex:1 — the search box drops to its own line when the
+     row is too narrow instead of squeezing the selects off-screen. */
+  flex: 1 1 200px;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -110,6 +117,13 @@ textarea {
   background: #f3f4f6;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+}
+
+/* Dates are fixed-width values and unreadable when broken mid-token — the
+   Applied column was rendering as "2026-08-" / "20" on a phone (KAN-29).
+   Applied to the date cells only: Next action is free text and SHOULD wrap. */
+.app-table .col-date {
   white-space: nowrap;
 }
 
@@ -238,8 +252,13 @@ textarea {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* Wraps rather than overflowing. Without flex-wrap, rows of two or three
+   fields stayed side by side at every width, running off both edges of a
+   phone in portrait and taking the required Company and Role title fields
+   with them (KAN-27). */
 .form-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 10px;
 }
@@ -249,7 +268,10 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
+  /* 220px basis: at a 370px portrait content width two fields cannot share a
+     line, so each gets its own. Landscape (842px) still fits three. */
+  flex: 1 1 220px;
+  min-width: 0;
   font-size: 0.82rem;
   color: #374151;
 }
