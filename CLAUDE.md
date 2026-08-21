@@ -36,6 +36,11 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
 - The detail screen *is* the edit form rather than a read view with a separate
   edit mode, and the new-entry screen is the same component with no initial
   values.
+- **That sharing means React reuses the instance rather than remounting** when
+  the route changes between `/applications/:id` and `/applications/new`. Any
+  state loaded for a record must be cleared explicitly on the way to `new`, or
+  the blank screen comes up holding the previous record. `ApplicationPage`'s
+  `load()` does this; anything added there has to do the same.
 - The list is a sortable, searchable, filterable table. Column visibility is
   responsive — see `REQUIREMENTS.md` §4.2.
 - **`STATUS_LABELS` in `StatusBadge.jsx` is the only place a status is spelled
@@ -70,5 +75,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 170 tests, 99% statements, 100% functions
+npm test      # 180 tests, 99% statements, 100% functions
 ```

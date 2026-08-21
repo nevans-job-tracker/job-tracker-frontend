@@ -26,19 +26,58 @@ export default function ApplicationPage() {
   // to return to, so the link falls through to a plain "/".
   const cameFromApp = location.key !== "default";
 
+  const [application, setApplication] = useState(null);
+  const [loading, setLoading] = useState(!isNew);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  /**
+   * The detail screen *is* the edit form (§4.4), so leaving it discards
+   * unsaved edits with no trace and retyping them is the only recovery.
+   *
+   * That is the irreversible case §4.1 says a confirmation is actually for —
+   * unlike archive, which is one click to undo and therefore prompts for
+   * nothing. It only interrupts when something would genuinely be lost.
+   */
+  function confirmLeave() {
+    return (
+      !dirty ||
+      window.confirm(
+        "You have unsaved changes to this application. Leave without saving?"
+      )
+    );
+  }
+
   function goBack(e) {
+    if (!confirmLeave()) {
+      e.preventDefault();
+      return;
+    }
     if (!cameFromApp) return;
     e.preventDefault();
     navigate(-1);
   }
 
-  const [application, setApplication] = useState(null);
-  const [loading, setLoading] = useState(!isNew);
-  const [error, setError] = useState(null);
-  const [saved, setSaved] = useState(false);
+  // Entering several in a row otherwise means a trip back to the list between
+  // each one, since saving lands on the new record's detail screen (KAN-33).
+  function startAnother() {
+    if (!confirmLeave()) return;
+    navigate("/applications/new");
+  }
 
   const load = useCallback(async () => {
-    if (isNew) return;
+    if (isNew) {
+      // Both routes render this same component, so React reuses the instance
+      // rather than remounting when you go from a record to /applications/new.
+      // Without clearing it, the previous record stays in state, the form key
+      // stays that record's id, and the "new" screen comes up showing its
+      // values — one Create away from a duplicate.
+      setApplication(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     try {
       setApplication(await getApplication(id));
     } catch (err) {
@@ -118,7 +157,18 @@ export default function ApplicationPage() {
             <span className="badge badge-ghosted">Archived</span>
           )}
         </div>
-        {saved && <span className="saved-flag">Saved</span>}
+        <div className="header-actions">
+          {saved && <span className="saved-flag">Saved</span>}
+          {/* Deliberately absent on the new-entry screen: it would navigate to
+              the route already showing, so it would either do nothing or
+              silently wipe what has been typed. There is nothing to add to
+              while you are already adding. */}
+          {!isNew && (
+            <button type="button" onClick={startAnother}>
+              + Add application
+            </button>
+          )}
+        </div>
       </header>
 
       {error && <div className="form-error">{error}</div>}
@@ -126,6 +176,7 @@ export default function ApplicationPage() {
       <ApplicationForm
         key={application?.id ?? "new"}
         initial={application}
+        onDirtyChange={setDirty}
         onSubmit={handleSubmit}
         onCancel={() => navigate("/")}
         submitLabel={isNew ? "Create application" : "Save changes"}

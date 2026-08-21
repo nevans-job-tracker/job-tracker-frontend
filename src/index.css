@@ -20,6 +20,21 @@ header {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  /* The detail header carries a long "Company — Role title" heading next to
+     its actions. Wrapping keeps the button full-size on a phone instead of
+     squeezing it into a mis-tap-sized target. */
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Kept at the opposite end of the header from the back link. §4.2 dropped
+   per-row actions because adjacent touch targets were a mis-tap hazard, and
+   the same reasoning applies to a Back and an Add sitting side by side. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 h1 {

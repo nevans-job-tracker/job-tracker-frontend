@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -256,6 +256,145 @@ describe("ApplicationPage — new application", () => {
 
     expect(await screen.findByText("All applications list")).toBeInTheDocument();
     expect(createApplication).not.toHaveBeenCalled();
+  });
+});
+
+describe("ApplicationPage — starting another entry (KAN-33)", () => {
+  const addButton = () => screen.getByRole("button", { name: /\+ add application/i });
+
+  it("offers the control on the detail screen", async () => {
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    expect(addButton()).toBeInTheDocument();
+  });
+
+  it("goes straight to a new entry without visiting the list", async () => {
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.click(addButton());
+
+    expect(await screen.findByText("New application")).toBeInTheDocument();
+    expect(screen.queryByText("All applications list")).not.toBeInTheDocument();
+  });
+
+  it("brings up a blank form, not the record just left", async () => {
+    // Both routes render the same component, so React reuses the instance
+    // instead of remounting. Without clearing the loaded record, the "new"
+    // screen comes up carrying its values and one Create makes a duplicate.
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.click(addButton());
+    await screen.findByText("New application");
+
+    expect(screen.getByLabelText(/company/i)).toHaveValue("");
+    expect(screen.getByLabelText(/role title/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^location$/i)).toHaveValue("");
+  });
+
+  it("creates a second application rather than editing the first", async () => {
+    createApplication.mockResolvedValue({ ...EXISTING, id: 8, company: "Brand New Co" });
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.click(addButton());
+    await screen.findByText("New application");
+
+    await fillRequired();
+    await userEvent.click(screen.getByRole("button", { name: /create application/i }));
+
+    await waitFor(() => expect(createApplication).toHaveBeenCalled());
+    expect(updateApplication).not.toHaveBeenCalled();
+    expect(createApplication.mock.calls[0][0]).toMatchObject({
+      company: "Brand New Co",
+      role_title: "QA Lead",
+    });
+  });
+
+  it("is absent on the new-entry screen", async () => {
+    // It would navigate to the route already showing — nothing to add to
+    // while you are already adding.
+    setup("/applications/new");
+    await screen.findByText("New application");
+    expect(
+      screen.queryByRole("button", { name: /\+ add application/i })
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("ApplicationPage — unsaved changes", () => {
+  const warning = /unsaved changes/i;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const stubConfirm = (answer) => {
+    const confirm = vi.fn(() => answer);
+    vi.stubGlobal("confirm", confirm);
+    return confirm;
+  };
+
+  it("does not interrupt when nothing has been typed", async () => {
+    const confirm = stubConfirm(true);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.click(screen.getByRole("button", { name: /\+ add application/i }));
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(await screen.findByText("New application")).toBeInTheDocument();
+  });
+
+  it("warns before the add button discards an edit", async () => {
+    const confirm = stubConfirm(true);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.type(screen.getByLabelText(/^notes$/i), "Spoke to the recruiter");
+
+    await userEvent.click(screen.getByRole("button", { name: /\+ add application/i }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(warning));
+    expect(await screen.findByText("New application")).toBeInTheDocument();
+  });
+
+  it("stays put when the warning is declined", async () => {
+    stubConfirm(false);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.type(screen.getByLabelText(/^notes$/i), "Spoke to the recruiter");
+
+    await userEvent.click(screen.getByRole("button", { name: /\+ add application/i }));
+    expect(screen.getByText("Northwind — QA Engineer")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^notes$/i)).toHaveValue("Spoke to the recruiter");
+  });
+
+  it("guards the back link too, which had the same hazard first", async () => {
+    stubConfirm(false);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.type(screen.getByLabelText(/^notes$/i), "Spoke to the recruiter");
+
+    await userEvent.click(screen.getByRole("link", { name: /all applications/i }));
+    expect(screen.queryByText("All applications list")).not.toBeInTheDocument();
+    expect(screen.getByText("Northwind — QA Engineer")).toBeInTheDocument();
+  });
+
+  it("stops warning once the edit has been saved", async () => {
+    // Saving replaces `initial`, so the form is pristine against the record
+    // that is now stored. A value the user typed as "120000" comes back
+    // "120000.00", which must not read as a fresh edit.
+    const confirm = stubConfirm(true);
+    updateApplication.mockResolvedValue({
+      ...EXISTING,
+      notes: "Spoke to the recruiter",
+      salary_min: "120000.00",
+    });
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    await userEvent.type(screen.getByLabelText(/^notes$/i), "Spoke to the recruiter");
+    await userEvent.type(screen.getByLabelText(/salary min/i), "120000");
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await screen.findByText("Saved");
+
+    await userEvent.click(screen.getByRole("button", { name: /\+ add application/i }));
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
 

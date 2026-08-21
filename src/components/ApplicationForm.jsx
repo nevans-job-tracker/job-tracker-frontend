@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 
 const emptyForm = {
@@ -37,7 +37,24 @@ function toForm(initial) {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export default function ApplicationForm({ initial, onSubmit, onCancel, submitLabel }) {
+// The only fields where what the user typed and what the server stores can
+// differ as strings while meaning the same thing: "120000" comes back
+// "120000.00". Comparing those literally would leave the form permanently
+// dirty after every save.
+const NUMERIC_FIELDS = ["salary_min", "salary_max"];
+
+const sameValue = (key, a, b) =>
+  NUMERIC_FIELDS.includes(key)
+    ? (a === "" ? null : Number(a)) === (b === "" ? null : Number(b))
+    : a === b;
+
+export default function ApplicationForm({
+  initial,
+  onSubmit,
+  onCancel,
+  submitLabel,
+  onDirtyChange,
+}) {
   const [form, setForm] = useState(() => toForm(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -59,6 +76,18 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
   // list and stays there. It is still legitimate when logging something about
   // to be submitted, so this warns rather than blocking. See REQUIREMENTS.md §2.
   const dateIsInFuture = Boolean(form.date_applied) && form.date_applied > today();
+
+  // Reported up so the page can warn before a navigation throws the edits
+  // away. Saving replaces `initial`, which resets this without a remount.
+  const pristine = useMemo(() => toForm(initial), [initial]);
+  const dirty = useMemo(
+    () => Object.keys(emptyForm).some((k) => !sameValue(k, form[k], pristine[k])),
+    [form, pristine]
+  );
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
