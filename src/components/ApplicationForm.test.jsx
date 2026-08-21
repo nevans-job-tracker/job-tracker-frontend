@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ApplicationForm from "./ApplicationForm.jsx";
+import { STATUS_LABELS } from "./StatusBadge.jsx";
 
 function setup(props = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -142,6 +143,19 @@ describe("ApplicationForm", () => {
       expect(onSubmit.mock.calls[0][0][key]).toEqual(expected);
     });
   });
+
+  // Guards the fix from KAN-34. Three places used to render a status name and
+  // only the badge used the shared map; the other two formatted their own with
+  // replace("_", " "), which is where the lowercase came from. If someone
+  // reintroduces local formatting, these fail.
+  it.each(Object.entries(STATUS_LABELS))(
+    "the status select offers %s as %s",
+    (value, label) => {
+      setup();
+      const option = screen.getByRole("option", { name: label });
+      expect(option).toHaveValue(value);
+    }
+  );
 
   it("surfaces a failure from the submit handler", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("Company already tracked"));

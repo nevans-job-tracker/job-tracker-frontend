@@ -1,4 +1,4 @@
-import { STATUS_OPTIONS } from "./StatusBadge.jsx";
+import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 
 // Archive state is independent of status: both filters apply at once.
 const SHOW_OPTIONS = [
@@ -28,10 +28,10 @@ export default function Filters({
         value={status}
         onChange={(e) => onStatusChange(e.target.value)}
       >
-        <option value="">All statuses</option>
+        <option value="">All Statuses</option>
         {STATUS_OPTIONS.map((s) => (
           <option key={s} value={s}>
-            {s.replace("_", " ")}
+            {STATUS_LABELS[s]}
           </option>
         ))}
       </select>

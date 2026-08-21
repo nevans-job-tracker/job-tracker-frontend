@@ -1,4 +1,7 @@
-const STATUS_LABELS = {
+// The single source of truth for how a status is spelled to a human. The
+// stored enum values stay lowercase (`phone_screen`) — §3 names them in the API
+// contract — so display capitalisation lives here and nowhere else.
+export const STATUS_LABELS = {
   applied: "Applied",
   phone_screen: "Phone Screen",
   interview: "Interview",

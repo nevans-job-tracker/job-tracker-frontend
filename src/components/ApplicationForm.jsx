@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { STATUS_OPTIONS } from "./StatusBadge.jsx";
+import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 
 const emptyForm = {
   company: "",
@@ -129,7 +129,7 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
           <select value={form.status} onChange={(e) => update("status", e.target.value)}>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {s.replace("_", " ")}
+                {STATUS_LABELS[s]}
               </option>
             ))}
           </select>

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
 import { listApplications } from "../api/client.js";
+import { STATUS_LABELS } from "../components/StatusBadge.jsx";
 
 vi.mock("../api/client.js", () => ({ listApplications: vi.fn() }));
 
@@ -243,6 +244,24 @@ describe("ListPage", () => {
       await screen.findByText("Company 01");
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
       expect(screen.getByText("2 applications")).toBeInTheDocument();
+    });
+  });
+
+  describe("status filter labels", () => {
+    // Same guard as ApplicationForm — see KAN-34.
+    it.each(Object.entries(STATUS_LABELS))(
+      "offers %s as %s",
+      async (value, label) => {
+        setup();
+        const option = await screen.findByRole("option", { name: label });
+        expect(option).toHaveValue(value);
+      }
+    );
+
+    it("labels the unfiltered option All Statuses", async () => {
+      setup();
+      expect(await screen.findByRole("option", { name: "All Statuses" }))
+        .toHaveValue("");
     });
   });
 
