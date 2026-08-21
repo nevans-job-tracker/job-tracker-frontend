@@ -133,7 +133,6 @@ describe("ApplicationForm", () => {
       [/years experience/i, "years_experience_min", "5", 5],
       [/^location$/i, "location", "Austin, TX", "Austin, TX"],
       [/salary max/i, "salary_max", "120000", 120000],
-      [/currency/i, "salary_currency", "GBP", "GBP"],
       [/^next action$/i, "next_action", "Follow up", "Follow up"],
       [/next action date/i, "next_action_date", "2026-09-01", "2026-09-01"],
       [/^notes$/i, "notes", "Spoke to the recruiter", "Spoke to the recruiter"],
@@ -213,6 +212,22 @@ describe("ApplicationForm", () => {
       await userEvent.clear(dateField());
       expect(screen.queryByText(/date is in the future/i)).not.toBeInTheDocument();
     });
+  });
+
+  it("has no currency field to mistype into", () => {
+    // It was free text, which is how "A$" reached a Remote (United States)
+    // role and then the list. Every job in this search pays in USD, so the
+    // input could only ever be a way to get it wrong.
+    setup();
+    expect(screen.queryByLabelText(/currency/i)).not.toBeInTheDocument();
+  });
+
+  it("does not send a currency, so the API default stands", async () => {
+    const { onSubmit } = setup();
+    await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
+    await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
+    await submit();
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("salary_currency");
   });
 
   describe("company size (KAN-35)", () => {

@@ -13,7 +13,6 @@ const emptyForm = {
   status: "applied",
   salary_min: "",
   salary_max: "",
-  salary_currency: "USD",
   date_applied: new Date().toISOString().slice(0, 10),
   next_action: "",
   next_action_date: "",
@@ -23,6 +22,13 @@ const emptyForm = {
 
 // Only these are sent to the API. Picking explicitly keeps server-managed
 // fields (id, created_at, contacts, ...) out of the payload.
+//
+// `salary_currency` is deliberately absent. It was a free-text input, which is
+// how "A$" ended up on a Remote (United States) role — a typo the list then
+// faithfully rendered. Every job in this search pays in USD (§4.2), so the
+// field was an opportunity to get it wrong and nothing else. Omitting it means
+// a create takes the API's USD default and an edit leaves the stored value
+// untouched.
 function toForm(initial) {
   if (!initial) return emptyForm;
   // Today's date is a default for a *new* record only. A saved application
@@ -240,13 +246,6 @@ export default function ApplicationForm({
             type="number"
             value={form.salary_max}
             onChange={(e) => update("salary_max", e.target.value)}
-          />
-        </label>
-        <label>
-          Currency
-          <input
-            value={form.salary_currency}
-            onChange={(e) => update("salary_currency", e.target.value)}
           />
         </label>
       </div>
