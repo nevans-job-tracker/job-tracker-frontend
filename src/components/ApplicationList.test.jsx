@@ -170,5 +170,20 @@ describe("ApplicationList", () => {
       const row = screen.getByText("Globex").closest("tr");
       expect(within(row).getAllByText("—").length).toBeGreaterThan(0);
     });
+
+    it("shows a dash rather than a blank cell for an undated application", () => {
+      // A job tracked before applying has no date (KAN-31). Without the
+      // fallback the Applied column renders empty, which reads as a rendering
+      // fault rather than a deliberate absence.
+      setup({
+        applications: [
+          { ...APPLICATIONS[0], id: 3, company: "Initech", date_applied: null,
+            status: "interested" },
+        ],
+      });
+      const row = screen.getByText("Initech").closest("tr");
+      expect(within(row).getByText("Interested")).toBeInTheDocument();
+      expect(within(row).getAllByText("—").length).toBeGreaterThan(0);
+    });
   });
 });

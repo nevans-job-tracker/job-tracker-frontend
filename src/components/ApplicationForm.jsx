@@ -22,7 +22,11 @@ const emptyForm = {
 // fields (id, created_at, contacts, ...) out of the payload.
 function toForm(initial) {
   if (!initial) return emptyForm;
-  const form = { ...emptyForm };
+  // Today's date is a default for a *new* record only. A saved application
+  // with no date applied is a real state now (§2), so it must render with the
+  // field empty — falling back to emptyForm here would pre-fill today and
+  // silently stamp it on the next save.
+  const form = { ...emptyForm, date_applied: "" };
   for (const key of Object.keys(emptyForm)) {
     if (initial[key] !== null && initial[key] !== undefined) {
       form[key] = initial[key];
@@ -37,6 +41,19 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
   const [form, setForm] = useState(() => toForm(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [statusChosen, setStatusChosen] = useState(false);
+
+  // On a new record the status follows the date until the user picks one:
+  // clearing the date shows Interested, typing one back shows Applied.
+  //
+  // This mirrors the API's own rule — a create with no date and no stated
+  // status is stored as `interested` — rather than duplicating it. The form
+  // always sends a status, so without this the select would read "Applied"
+  // while an undated record is anything but. An existing record is left alone;
+  // its status is whatever was saved.
+  const isNew = !initial;
+  const status =
+    isNew && !statusChosen && !form.date_applied ? "interested" : form.status;
 
   // A future date is usually a typo — a mistyped year sorts to the top of the
   // list and stays there. It is still legitimate when logging something about
@@ -56,6 +73,8 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
     try {
       await onSubmit({
         ...form,
+        status,
+        date_applied: blankToNull(form.date_applied),
         salary_min: form.salary_min === "" ? null : Number(form.salary_min),
         salary_max: form.salary_max === "" ? null : Number(form.salary_max),
         job_link: blankToNull(form.job_link),
@@ -126,7 +145,13 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
         </label>
         <label>
           Status
-          <select value={form.status} onChange={(e) => update("status", e.target.value)}>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatusChosen(true);
+              update("status", e.target.value);
+            }}
+          >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABELS[s]}
@@ -164,9 +189,8 @@ export default function ApplicationForm({ initial, onSubmit, onCancel, submitLab
 
       <div className="form-row">
         <label>
-          Date applied *
+          Date applied
           <input
-            required
             type="date"
             value={form.date_applied}
             onChange={(e) => update("date_applied", e.target.value)}

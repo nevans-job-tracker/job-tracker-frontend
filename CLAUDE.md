@@ -38,6 +38,15 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   values.
 - The list is a sortable, searchable, filterable table. Column visibility is
   responsive — see `REQUIREMENTS.md` §4.2.
+- **`STATUS_LABELS` in `StatusBadge.jsx` is the only place a status is spelled
+  for a human** (KAN-34). Both dropdowns and the badge read it, and its
+  declaration order is the order the dropdowns offer — which is why
+  `interested` leads even though the database appends it.
+- **On a new record the status follows the date until the user picks one**
+  (KAN-31): clearing Date applied shows Interested, entering one shows Applied.
+  This mirrors the API's own rule rather than duplicating it. The form always
+  sends a status, so without it the select would read Applied while an undated
+  record is anything but.
 - **Mobile matters.** The app is used from a phone on the LAN, so responsive
   layout is a requirement, not a nicety.
 
@@ -61,5 +70,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 152 tests, 99% statements, 100% functions
+npm test      # 163 tests, 99% statements, 100% functions
 ```

@@ -144,6 +144,72 @@ describe("ApplicationForm", () => {
     });
   });
 
+  describe("tracking a job before applying (KAN-31)", () => {
+    // The form always sends a status, so if the select did not follow the date
+    // it would read "Applied" while the record being created has no date to
+    // apply on. See the matching rule on ApplicationCreate in schemas.py.
+    const dateField = () => screen.getByLabelText(/date applied/i);
+    const statusField = () => screen.getByLabelText(/^status/i);
+
+    it("no longer requires a date applied", () => {
+      setup();
+      expect(dateField()).not.toBeRequired();
+    });
+
+    it("shows Interested once the date is cleared", async () => {
+      setup();
+      expect(statusField()).toHaveValue("applied");
+      await userEvent.clear(dateField());
+      expect(statusField()).toHaveValue("interested");
+    });
+
+    it("goes back to Applied when a date is entered again", async () => {
+      setup();
+      await userEvent.clear(dateField());
+      fireEvent.change(dateField(), { target: { value: "2026-08-21" } });
+      expect(statusField()).toHaveValue("applied");
+    });
+
+    it("stops following once the user picks a status", async () => {
+      // Interested-with-a-date is legitimate; the form must not argue.
+      setup();
+      await userEvent.selectOptions(statusField(), "interview");
+      await userEvent.clear(dateField());
+      expect(statusField()).toHaveValue("interview");
+    });
+
+    it("submits a null date rather than an empty string", async () => {
+      const { onSubmit } = setup();
+      await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+      await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
+      await userEvent.clear(dateField());
+      await submit();
+
+      expect(onSubmit.mock.calls[0][0]).toMatchObject({
+        date_applied: null,
+        status: "interested",
+      });
+    });
+
+    it("leaves an existing record's date empty rather than filling today", () => {
+      // Today is a default for a *new* record. Falling back to it here would
+      // stamp a date the user never entered onto the next save.
+      setup({ initial: { company: "Northwind", date_applied: null } });
+      expect(dateField()).toHaveValue("");
+    });
+
+    it("does not rewrite the status of an existing undated record", () => {
+      setup({ initial: { company: "Northwind", date_applied: null, status: "ghosted" } });
+      expect(statusField()).toHaveValue("ghosted");
+    });
+
+    it("does not warn about a future date when there is no date", async () => {
+      setup();
+      await userEvent.clear(dateField());
+      expect(screen.queryByText(/date is in the future/i)).not.toBeInTheDocument();
+    });
+  });
+
   // Guards the fix from KAN-34. Three places used to render a status name and
   // only the badge used the shared map; the other two formatted their own with
   // replace("_", " "), which is where the lowercase came from. If someone

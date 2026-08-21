@@ -316,6 +316,12 @@ textarea {
   text-transform: capitalize;
 }
 
+/* Teal, deliberately outside the blue→amber→green run the lifecycle statuses
+   use: an Interested row has not entered that progression yet. */
+.badge-interested {
+  background: #cffafe;
+  color: #155e75;
+}
 .badge-applied {
   background: #dbeafe;
   color: #1e40af;

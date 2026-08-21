@@ -94,7 +94,7 @@ export default function ApplicationList({
                 "—"
               )}
             </td>
-            <td className="col-date">{app.date_applied}</td>
+            <td className="col-date">{app.date_applied || "—"}</td>
           </tr>
         ))}
       </tbody>
