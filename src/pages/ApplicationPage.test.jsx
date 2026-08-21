@@ -56,7 +56,7 @@ function setup(initialEntry) {
 }
 
 const fillRequired = async () => {
-  await userEvent.type(screen.getByLabelText(/company/i), "Brand New Co");
+  await userEvent.type(screen.getByLabelText(/^company \*$/i), "Brand New Co");
   await userEvent.type(screen.getByLabelText(/role title/i), "QA Lead");
 };
 
@@ -75,7 +75,7 @@ describe("ApplicationPage — existing application", () => {
   it("populates the form", async () => {
     setup("/applications/7");
     await screen.findByText("Northwind — QA Engineer");
-    expect(screen.getByLabelText(/company/i)).toHaveValue("Northwind");
+    expect(screen.getByLabelText(/^company \*$/i)).toHaveValue("Northwind");
     expect(screen.getByLabelText(/location/i)).toHaveValue("Austin, TX");
   });
 
@@ -197,7 +197,7 @@ describe("ApplicationPage — new application", () => {
     setup("/applications/new");
     expect(await screen.findByText("New application")).toBeInTheDocument();
     expect(getApplication).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/company/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^company \*$/i)).toHaveValue("");
   });
 
   it("hides the contacts editor until the record exists", async () => {
@@ -286,7 +286,7 @@ describe("ApplicationPage — starting another entry (KAN-33)", () => {
     await userEvent.click(addButton());
     await screen.findByText("New application");
 
-    expect(screen.getByLabelText(/company/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^company \*$/i)).toHaveValue("");
     expect(screen.getByLabelText(/role title/i)).toHaveValue("");
     expect(screen.getByLabelText(/^location$/i)).toHaveValue("");
   });

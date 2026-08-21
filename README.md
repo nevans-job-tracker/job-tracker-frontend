@@ -39,7 +39,7 @@ Every run writes two browsable reports:
 
 Both are generated output, and both are gitignored.
 
-180 tests: 99% of statements and 100% of functions.
+195 tests: 99% of statements and 100% of functions.
 
 Function coverage is worth holding at 100%. Most of the handlers here are
 inline arrows that pass a field name to a shared helper — the helper is well

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
+import { COMPANY_SIZE_OPTIONS, COMPANY_SIZE_LABELS } from "./companySize.js";
 
 const emptyForm = {
   company: "",
@@ -7,6 +8,8 @@ const emptyForm = {
   job_link: "",
   source: "",
   location: "",
+  company_size: "",
+  years_experience_min: "",
   status: "applied",
   salary_min: "",
   salary_max: "",
@@ -41,7 +44,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 // differ as strings while meaning the same thing: "120000" comes back
 // "120000.00". Comparing those literally would leave the form permanently
 // dirty after every save.
-const NUMERIC_FIELDS = ["salary_min", "salary_max"];
+const NUMERIC_FIELDS = ["salary_min", "salary_max", "years_experience_min"];
 
 const sameValue = (key, a, b) =>
   NUMERIC_FIELDS.includes(key)
@@ -104,6 +107,9 @@ export default function ApplicationForm({
         ...form,
         status,
         date_applied: blankToNull(form.date_applied),
+        company_size: blankToNull(form.company_size),
+        years_experience_min:
+          form.years_experience_min === "" ? null : Number(form.years_experience_min),
         salary_min: form.salary_min === "" ? null : Number(form.salary_min),
         salary_max: form.salary_max === "" ? null : Number(form.salary_max),
         job_link: blankToNull(form.job_link),
@@ -187,6 +193,35 @@ export default function ApplicationForm({
               </option>
             ))}
           </select>
+        </label>
+      </div>
+
+      <div className="form-row">
+        <label>
+          Company size
+          <select
+            value={form.company_size}
+            onChange={(e) => update("company_size", e.target.value)}
+          >
+            {/* Blank is a real answer, not a prompt: a posting often does not
+                say, and guessing is worse than leaving it out. */}
+            <option value="">Not stated</option>
+            {COMPANY_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {COMPANY_SIZE_LABELS[size]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Years experience required
+          <input
+            type="number"
+            min="0"
+            placeholder="Minimum, e.g. 5 for &quot;5+ years&quot;"
+            value={form.years_experience_min}
+            onChange={(e) => update("years_experience_min", e.target.value)}
+          />
         </label>
       </div>
 

@@ -47,6 +47,10 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   for a human** (KAN-34). Both dropdowns and the badge read it, and its
   declaration order is the order the dropdowns offer — which is why
   `interested` leads even though the database appends it.
+- **`COMPANY_SIZE_LABELS` in `components/companySize.js`** is the same pattern
+  as `STATUS_LABELS`, applied from the start rather than after a cleanup. Its
+  declaration order matches the backend enum, smallest to largest. If a third
+  such map appears, they belong together in one module.
 - **On a new record the status follows the date until the user picks one**
   (KAN-31): clearing Date applied shows Interested, entering one shows Applied.
   This mirrors the API's own rule rather than duplicating it. The form always
@@ -75,5 +79,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 180 tests, 99% statements, 100% functions
+npm test      # 195 tests, 99% statements, 100% functions
 ```

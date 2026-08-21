@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ApplicationForm from "./ApplicationForm.jsx";
 import { STATUS_LABELS } from "./StatusBadge.jsx";
+import { COMPANY_SIZE_LABELS } from "./companySize.js";
 
 function setup(props = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -16,7 +17,7 @@ const submit = () => userEvent.click(screen.getByRole("button", { name: /save|cr
 describe("ApplicationForm", () => {
   it("submits the values that were typed", async () => {
     const { onSubmit } = setup();
-    await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+    await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
     await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
     await submit();
 
@@ -27,7 +28,7 @@ describe("ApplicationForm", () => {
 
   it("sends null rather than empty strings for untouched optional fields", async () => {
     const { onSubmit } = setup();
-    await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+    await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
     await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
     await submit();
 
@@ -40,6 +41,8 @@ describe("ApplicationForm", () => {
       "next_action_date",
       "notes",
       "job_description",
+      "company_size",
+      "years_experience_min",
     ]) {
       expect(payload[field], `${field} should be null`).toBeNull();
     }
@@ -49,7 +52,7 @@ describe("ApplicationForm", () => {
 
   it("converts salary inputs to numbers", async () => {
     const { onSubmit } = setup();
-    await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+    await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
     await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
     await userEvent.type(screen.getByLabelText(/salary min/i), "90000");
     await submit();
@@ -81,7 +84,7 @@ describe("ApplicationForm", () => {
 
     it("populates the fields", () => {
       setup({ initial: existing });
-      expect(screen.getByLabelText(/company/i)).toHaveValue("Northwind");
+      expect(screen.getByLabelText(/^company \*$/i)).toHaveValue("Northwind");
       expect(screen.getByLabelText(/^status/i)).toHaveValue("interview");
       expect(screen.getByLabelText(/next action$/i)).toHaveValue("Follow up");
     });
@@ -100,8 +103,8 @@ describe("ApplicationForm", () => {
 
     it("leaves untouched fields unchanged", async () => {
       const { onSubmit } = setup({ initial: existing });
-      await userEvent.clear(screen.getByLabelText(/company/i));
-      await userEvent.type(screen.getByLabelText(/company/i), "Northwind Traders");
+      await userEvent.clear(screen.getByLabelText(/^company \*$/i));
+      await userEvent.type(screen.getByLabelText(/^company \*$/i), "Northwind Traders");
       await submit();
 
       const payload = onSubmit.mock.calls[0][0];
@@ -126,6 +129,8 @@ describe("ApplicationForm", () => {
     it.each([
       [/job link/i, "job_link", "https://example.com/job", "https://example.com/job"],
       [/^source$/i, "source", "LinkedIn", "LinkedIn"],
+      [/company size/i, "company_size", "mid_size", "mid_size"],
+      [/years experience/i, "years_experience_min", "5", 5],
       [/^location$/i, "location", "Austin, TX", "Austin, TX"],
       [/salary max/i, "salary_max", "120000", 120000],
       [/currency/i, "salary_currency", "GBP", "GBP"],
@@ -135,7 +140,7 @@ describe("ApplicationForm", () => {
       [/job description/i, "job_description", "Pasted posting", "Pasted posting"],
     ])("%s is submitted as %s", async (label, key, entered, expected) => {
       const { onSubmit } = setup();
-      fill(/company/i, "Acme Corp");
+      fill(/^company \*$/i, "Acme Corp");
       fill(/role title/i, "QA Engineer");
       fill(label, entered);
       await submit();
@@ -180,7 +185,7 @@ describe("ApplicationForm", () => {
 
     it("submits a null date rather than an empty string", async () => {
       const { onSubmit } = setup();
-      await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+      await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
       await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
       await userEvent.clear(dateField());
       await submit();
@@ -210,6 +215,104 @@ describe("ApplicationForm", () => {
     });
   });
 
+  describe("company size (KAN-35)", () => {
+    const sizeSelect = () => screen.getByLabelText(/company size/i);
+
+    // Same guard as the status dropdown: the labels are string literals that
+    // nothing else checks, and these carry the employee ranges that make the
+    // band names mean anything. Written from the start rather than after a
+    // KAN-34-style cleanup.
+    it.each(Object.entries(COMPANY_SIZE_LABELS))(
+      "offers %s as %s",
+      (value, label) => {
+        setup();
+        expect(screen.getByRole("option", { name: label })).toHaveValue(value);
+      }
+    );
+
+    it("labels every band with its employee range", () => {
+      // "Large" means nothing without "201-500", and choosing correctly is the
+      // whole point of a controlled list. Every label must carry a count.
+      setup();
+      for (const [value, label] of Object.entries(COMPANY_SIZE_LABELS)) {
+        expect(label, `${value} must state a headcount`).toMatch(
+          /\d[\d–+\s-]*employees/
+        );
+      }
+      expect(screen.getByRole("option", { name: /^Large/ })).toHaveAccessibleName(
+        "Large (201–500 employees)"
+      );
+    });
+
+    it("offers blank as a real answer rather than a prompt", () => {
+      setup();
+      expect(screen.getByRole("option", { name: "Not stated" })).toHaveValue("");
+      expect(sizeSelect()).toHaveValue("");
+    });
+
+    it("keeps a saved band selected", () => {
+      setup({ initial: { company: "Northwind", company_size: "very_large" } });
+      expect(sizeSelect()).toHaveValue("very_large");
+    });
+
+    it("lists the bands smallest to largest", () => {
+      // The order is not cosmetic: it matches the enum on the backend, which
+      // is what makes sorting by this column mean band order on MariaDB.
+      setup();
+      const values = [...sizeSelect().options].map((o) => o.value).filter(Boolean);
+      expect(values).toEqual([
+        "seed",
+        "early",
+        "mid_size",
+        "large",
+        "very_large",
+        "massive",
+      ]);
+    });
+  });
+
+  describe("years experience required (KAN-32)", () => {
+    const yearsField = () => screen.getByLabelText(/years experience/i);
+
+    it("submits zero as a real answer, not as absent", () => {
+      // An entry-level posting states no minimum, which is not the same as not
+      // stating one — blankToNull would collapse the two.
+      const { onSubmit } = setup();
+      fireEvent.change(screen.getByLabelText(/^company \*$/i), {
+        target: { value: "Acme Corp" },
+      });
+      fireEvent.change(screen.getByLabelText(/role title/i), {
+        target: { value: "QA Engineer" },
+      });
+      fireEvent.change(yearsField(), { target: { value: "0" } });
+      return submit().then(() => {
+        expect(onSubmit.mock.calls[0][0].years_experience_min).toBe(0);
+      });
+    });
+
+    it("refuses a negative minimum at the input", () => {
+      setup();
+      expect(yearsField()).toHaveAttribute("min", "0");
+    });
+
+    it("keeps a saved value without reading as an unsaved edit", () => {
+      // The server returns a number and the input holds a string; comparing
+      // them literally would leave the form permanently dirty after a save.
+      const onDirtyChange = vi.fn();
+      render(
+        <ApplicationForm
+          initial={{ company: "Northwind", years_experience_min: 5 }}
+          onSubmit={vi.fn()}
+          onCancel={vi.fn()}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+      expect(screen.getByLabelText(/years experience/i)).toHaveValue(5);
+      expect(onDirtyChange).toHaveBeenCalledWith(false);
+      expect(onDirtyChange).not.toHaveBeenCalledWith(true);
+    });
+  });
+
   // Guards the fix from KAN-34. Three places used to render a status name and
   // only the badge used the shared map; the other two formatted their own with
   // replace("_", " "), which is where the lowercase came from. If someone
@@ -226,7 +329,7 @@ describe("ApplicationForm", () => {
   it("surfaces a failure from the submit handler", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("Company already tracked"));
     render(<ApplicationForm onSubmit={onSubmit} onCancel={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+    await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
     await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
     await submit();
 
@@ -260,7 +363,7 @@ describe("ApplicationForm", () => {
 
     it("still allows the record to be saved", async () => {
       const { onSubmit } = setup();
-      await userEvent.type(screen.getByLabelText(/company/i), "Acme Corp");
+      await userEvent.type(screen.getByLabelText(/^company \*$/i), "Acme Corp");
       await userEvent.type(screen.getByLabelText(/role title/i), "QA Engineer");
       const field = screen.getByLabelText(/date applied/i);
       await userEvent.clear(field);
