@@ -1,15 +1,39 @@
 import StatusBadge from "./StatusBadge.jsx";
 
+/**
+ * Thousands, with a K — 106400 becomes "106K", rounded to nearest.
+ *
+ * Below 1000 the value is left alone. An hourly rate entered as 55 would
+ * otherwise render as "0K", which is not merely ugly but wrong.
+ */
+function formatAmount(value) {
+  const n = Number(value);
+  return n < 1000 ? n.toLocaleString() : `${Math.round(n / 1000).toLocaleString()}K`;
+}
+
+/**
+ * List display only — the detail screen keeps raw numbers in its editable
+ * fields, and the stored decimal(10,2) is untouched either way.
+ *
+ * The currency is omitted for USD, which every job in this search pays in, so
+ * the suffix would be noise on every row of a column that only survives on
+ * wider screens (§4.2). Anything else still labels itself rather than showing
+ * a misleading bare number.
+ */
 function formatSalary(app) {
   if (!app.salary_min && !app.salary_max) return "—";
-  const currency = app.salary_currency || "";
-  if (app.salary_min && app.salary_max) {
-    return `${Number(app.salary_min).toLocaleString()}–${Number(
-      app.salary_max
-    ).toLocaleString()} ${currency}`;
-  }
-  const val = app.salary_min || app.salary_max;
-  return `${Number(val).toLocaleString()} ${currency}`;
+
+  const suffix =
+    app.salary_currency && app.salary_currency !== "USD"
+      ? ` ${app.salary_currency}`
+      : "";
+
+  const amount =
+    app.salary_min && app.salary_max
+      ? `${formatAmount(app.salary_min)}–${formatAmount(app.salary_max)}`
+      : formatAmount(app.salary_min || app.salary_max);
+
+  return `${amount}${suffix}`;
 }
 
 export default function ApplicationList({

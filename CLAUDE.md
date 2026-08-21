@@ -70,5 +70,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 163 tests, 99% statements, 100% functions
+npm test      # 170 tests, 99% statements, 100% functions
 ```

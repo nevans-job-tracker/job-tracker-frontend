@@ -154,9 +154,58 @@ describe("ApplicationList", () => {
   });
 
   describe("cell formatting", () => {
-    it("renders a salary range", () => {
+    it("renders a salary range in thousands, without the USD suffix", () => {
       setup();
-      expect(screen.getByText(/90,000–120,000 USD/)).toBeInTheDocument();
+      expect(screen.getByText("90K–120K")).toBeInTheDocument();
+    });
+
+    describe("salary formatting (KAN-36)", () => {
+      const salary = (overrides) =>
+        setup({
+          applications: [
+            { ...APPLICATIONS[0], id: 9, company: "Initech", ...overrides },
+          ],
+        });
+
+      it("rounds to the nearest thousand", () => {
+        salary({ salary_min: "106400.00", salary_max: "177300.00" });
+        expect(screen.getByText("106K–177K")).toBeInTheDocument();
+      });
+
+      it("rounds a half up rather than truncating", () => {
+        // 106500 -> 107K. Truncation would read 106K, understating the offer.
+        salary({ salary_min: "106500.00", salary_max: "106500.00" });
+        expect(screen.getByText("107K–107K")).toBeInTheDocument();
+      });
+
+      it("formats a lone bound the same way", () => {
+        salary({ salary_min: "150000.00", salary_max: null });
+        expect(screen.getByText("150K")).toBeInTheDocument();
+      });
+
+      it("formats a lone maximum the same way", () => {
+        salary({ salary_min: null, salary_max: "150000.00" });
+        expect(screen.getByText("150K")).toBeInTheDocument();
+      });
+
+      it("leaves a sub-1000 value unrounded", () => {
+        // An hourly rate. Rounding this to thousands gives "0K", which is not
+        // merely ugly but wrong.
+        salary({ salary_min: "55.00", salary_max: "70.00" });
+        expect(screen.getByText("55–70")).toBeInTheDocument();
+      });
+
+      it("keeps the suffix for a currency that is not USD", () => {
+        // The field stays meaningful: dropping it unconditionally would show a
+        // misleading bare number for a non-USD entry.
+        salary({ salary_currency: "GBP" });
+        expect(screen.getByText("90K–120K GBP")).toBeInTheDocument();
+      });
+
+      it("groups thousands in a very large figure", () => {
+        salary({ salary_min: "1200000.00", salary_max: "1500000.00" });
+        expect(screen.getByText("1,200K–1,500K")).toBeInTheDocument();
+      });
     });
 
     it("shows the next action with its due date", () => {
