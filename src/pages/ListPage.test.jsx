@@ -4,9 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
 import { listApplications } from "../api/client.js";
+import { downloadCsv } from "../csv.js";
 import { STATUS_LABELS } from "../components/StatusBadge.jsx";
 
 vi.mock("../api/client.js", () => ({ listApplications: vi.fn() }));
+
+// toCsv stays real, so these exercise the actual file the browser would get.
+// Only the handover to the browser is stubbed — jsdom has no Blob download.
+vi.mock("../csv.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadCsv: vi.fn(),
+}));
 
 function application(n, overrides = {}) {
   return {
@@ -262,6 +270,77 @@ describe("ListPage", () => {
       setup();
       expect(await screen.findByRole("option", { name: "All Statuses" }))
         .toHaveValue("");
+    });
+  });
+
+  describe("export (KAN-39)", () => {
+    const exportButton = () => screen.getByRole("button", { name: /export csv/i });
+
+    it("offers an Export control", async () => {
+      setup();
+      await screen.findByText("Company 01");
+      expect(exportButton()).toBeInTheDocument();
+    });
+
+    it("is disabled when the filters match nothing", async () => {
+      // A file of nothing but headers is a puzzle, not a deliverable.
+      setup({ total: 0, items: [] });
+      await waitFor(() => expect(listApplications).toHaveBeenCalled());
+      expect(exportButton()).toBeDisabled();
+    });
+
+    it("asks for every matching row, not the page on screen", async () => {
+      // The list paginates at 50 (§4.3). Exporting 50 of 120 without saying so
+      // is the same silent truncation that story exists to have fixed.
+      const page = Array.from({ length: 50 }, (_, i) => application(i + 1));
+      setup({ total: 120, items: page });
+      await screen.findByText("Company 01");
+
+      await userEvent.click(exportButton());
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({
+          skip: 0,
+          limit: 120,
+          include_contacts: true,
+        })
+      );
+    });
+
+    it("carries the current filters into the export", async () => {
+      setup({ initialEntry: "/?search=Acme&status=offer&show=archived" });
+      await screen.findByText("Company 01");
+
+      await userEvent.click(exportButton());
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({
+          search: "Acme",
+          status: "offer",
+          show: "archived",
+          include_contacts: true,
+        })
+      );
+    });
+
+    it("hands the browser a dated file containing the rows", async () => {
+      setup();
+      await screen.findByText("Company 01");
+      await userEvent.click(exportButton());
+
+      await waitFor(() => expect(downloadCsv).toHaveBeenCalled());
+      const [text, filename] = downloadCsv.mock.calls[0];
+      expect(filename).toMatch(/^job-tracker-\d{4}-\d{2}-\d{2}\.csv$/);
+      expect(text).toContain("Company 01");
+      expect(text.split("\r\n")[0]).toContain("Job description");
+    });
+
+    it("surfaces a failure instead of downloading a broken file", async () => {
+      setup();
+      await screen.findByText("Company 01");
+      listApplications.mockRejectedValueOnce(new Error("Failed to fetch"));
+
+      await userEvent.click(exportButton());
+      expect(await screen.findByText("Failed to fetch")).toBeInTheDocument();
+      expect(downloadCsv).not.toHaveBeenCalled();
     });
   });
 

@@ -61,6 +61,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Green, and deliberately not the blue primary: Export produces a file rather
+   than changing anything, so it should not read as the main action on the
+   screen. It sits left of Add application, which stays the primary. */
+button.export {
+  background: #16a34a;
+}
+
+button.export:hover {
+  background: #15803d;
+}
+
 button.danger {
   background: #dc2626;
 }

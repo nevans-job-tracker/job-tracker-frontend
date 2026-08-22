@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { listApplications } from "../api/client.js";
+import { toCsv, csvFilename, downloadCsv } from "../csv.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
 
@@ -55,6 +56,38 @@ export default function ListPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
+
+  /**
+   * Exports every row the current filters match, not the page on screen.
+   *
+   * The list paginates at 50 behind Load more (§4.3), but the filter is the
+   * intent and the page size is an artifact of scrolling — handing over 50 of
+   * 120 rows without saying so is the same silent-truncation bug §4.3 exists
+   * to have fixed. `total` came back with the last page under these same
+   * filters, so it is the right ceiling to ask for.
+   */
+  async function handleExport() {
+    setExporting(true);
+    setError(null);
+    try {
+      const data = await listApplications({
+        search,
+        status,
+        show,
+        sort_by: sortBy,
+        sort_dir: sortDir,
+        skip: 0,
+        limit: total,
+        include_contacts: true,
+      });
+      downloadCsv(toCsv(data.items), csvFilename());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const fetchPage = useCallback(
     async ({ skip, limit, append }) => {
@@ -113,9 +146,20 @@ export default function ListPage() {
     <>
       <header>
         <h1>Job Application Tracker</h1>
-        <button onClick={() => navigate("/applications/new")}>
-          + Add application
-        </button>
+        <div className="header-actions">
+          {/* Disabled on an empty result: a file of nothing but headers is a
+              puzzle rather than a deliverable. */}
+          <button
+            className="export"
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+          >
+            {exporting ? "Exporting..." : "Export CSV"}
+          </button>
+          <button onClick={() => navigate("/applications/new")}>
+            + Add application
+          </button>
+        </div>
       </header>
 
       <Filters
