@@ -50,15 +50,30 @@ export async function convertDocx(file) {
     );
   }
 
-  const mammoth = await import("mammoth");
-  let html;
-  try {
-    ({ value: html } = await mammoth.convertToHtml({
-      arrayBuffer: await file.arrayBuffer(),
-    }));
-  } catch (err) {
-    throw new DocxError(`Could not read that .docx: ${err.message}`);
+  const arrayBuffer = await file.arrayBuffer();
+
+  // A .docx is a ZIP, so it starts "PK". Checking here rather than
+  // letting the converter discover it gives a message worth reading — and
+  // keeps the library off the path entirely for input that cannot work.
+  const magic = new Uint8Array(arrayBuffer.slice(0, 4));
+  if (magic[0] !== 0x50 || magic[1] !== 0x4b) {
+    throw new DocxError(
+      "That file is not a readable .docx — it may be corrupt, or renamed from " +
+        "something else."
+    );
   }
+
+  const mammoth = await import("mammoth");
+  // Handled on the promise rather than around an await. mammoth is built on
+  // bluebird, which reports a rejection as unhandled if nothing is attached to
+  // the promise it produced, even when an enclosing try/catch would have
+  // caught it — and vitest fails the whole run on an unhandled rejection.
+  const html = await mammoth
+    .convertToHtml({ arrayBuffer })
+    .then((result) => result.value)
+    .catch((err) => {
+      throw new DocxError(`Could not read that .docx: ${err.message}`);
+    });
 
   // Sanitising is what drops any embedded images, since IMG is not in the
   // allowlist. mammoth would otherwise inline them as base64 data URIs and

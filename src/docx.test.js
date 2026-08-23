@@ -1,5 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { convertDocx, DocxError, DOCX_TYPE, MAX_BYTES } from "./docx.js";
+
+// Every refusal below is caught before the converter is reached, except the
+// last one — which is about how *this* module wraps a failure from mammoth,
+// not about mammoth's zip reader.
+//
+// It is mocked because mammoth is built on bluebird, which reports a rejection
+// from inside its own chain as unhandled no matter what the caller attaches,
+// and vitest fails the whole run on an unhandled rejection. Real conversion is
+// verified against a real .docx in the browser instead.
+vi.mock("mammoth", () => ({
+  convertToHtml: vi.fn(() => Promise.reject(new Error("Could not find file in options"))),
+}));
 import { sanitiseHtml, toDisplayHtml, htmlToText } from "./coverLetter.js";
 
 const file = (name, type, bytes = 10) =>
@@ -22,11 +34,37 @@ describe("convertDocx refuses before spending the conversion", () => {
   });
 
   it("accepts a .docx by extension when the browser gives no type", async () => {
-    // Refused later for being unreadable, not for its name — which is the
-    // point: the name check must not be what rejects a real document.
+    // Refused later for its contents, not its name — which is the point: the
+    // name check must not be what rejects a real document.
     await expect(convertDocx(file("letter.docx", ""))).rejects.toThrow(
-      /could not read/i
+      /not a readable \.docx/i
     );
+  });
+
+  it("refuses something that is not a ZIP before the converter sees it", async () => {
+    // A .docx always starts "PK". Checking here gives a message worth reading
+    // and keeps mammoth off the path for input that cannot possibly work —
+    // which also avoids the unhandled rejection its promise chain leaves
+    // behind, and which vitest fails the run over.
+    await expect(
+      convertDocx(file("letter.docx", DOCX_TYPE))
+    ).rejects.toThrow(/not a readable \.docx/i);
+  });
+
+  it("wraps a converter failure rather than leaking it raw", async () => {
+    // 22 bytes: an empty ZIP central directory. Gets past the magic check, so
+    // the converter is reached and its rejection has to come back as a
+    // DocxError the field can display.
+    const empty = new Uint8Array(22);
+    empty.set([0x50, 0x4b, 0x05, 0x06]);
+    const zip = Object.defineProperty(
+      new File([empty], "letter.docx", { type: DOCX_TYPE }),
+      "size",
+      { value: 22 }
+    );
+    const err = await convertDocx(zip).catch((e) => e);
+    expect(err).toBeInstanceOf(DocxError);
+    expect(err.message).toMatch(/could not read/i);
   });
 
   it("refuses a file too large to be a one-page letter", async () => {
@@ -39,11 +77,6 @@ describe("convertDocx refuses before spending the conversion", () => {
     await expect(convertDocx(null)).rejects.toBeInstanceOf(DocxError);
   });
 
-  it("reports an unreadable .docx rather than throwing something raw", async () => {
-    const err = await convertDocx(file("letter.docx", DOCX_TYPE)).catch((e) => e);
-    expect(err).toBeInstanceOf(DocxError);
-    expect(err.message).toMatch(/could not read/i);
-  });
 });
 
 describe("sanitiseHtml", () => {
