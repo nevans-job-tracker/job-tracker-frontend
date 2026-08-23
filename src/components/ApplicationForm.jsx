@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 import { COMPANY_SIZE_OPTIONS, COMPANY_SIZE_LABELS } from "./companySize.js";
+import { downloadCoverLetter } from "../coverLetter.js";
 
 const emptyForm = {
   company: "",
@@ -18,6 +19,7 @@ const emptyForm = {
   next_action_date: "",
   notes: "",
   job_description: "",
+  cover_letter: "",
 };
 
 // Only these are sent to the API. Picking explicitly keeps server-managed
@@ -125,6 +127,7 @@ export default function ApplicationForm({
         next_action_date: blankToNull(form.next_action_date),
         notes: blankToNull(form.notes),
         job_description: blankToNull(form.job_description),
+        cover_letter: blankToNull(form.cover_letter),
       });
     } catch (err) {
       setError(err.message);
@@ -301,6 +304,27 @@ export default function ApplicationForm({
           value={form.job_description}
           onChange={(e) => update("job_description", e.target.value)}
         />
+      </label>
+
+      <label className="form-notes">
+        Cover letter
+        <textarea
+          rows={8}
+          placeholder="What you wrote to this employer. A PDF can be regenerated from it."
+          value={form.cover_letter}
+          onChange={(e) => update("cover_letter", e.target.value)}
+        />
+        {/* Downloads what is on screen rather than what was last saved, so an
+            edit can be exported without saving first. HTML because that is
+            what opens in Word with the paragraphs intact. */}
+        <button
+          type="button"
+          className="link-button"
+          disabled={!form.cover_letter.trim()}
+          onClick={() => downloadCoverLetter(form.cover_letter, form.company)}
+        >
+          Download as HTML
+        </button>
       </label>
 
       <div className="form-actions">

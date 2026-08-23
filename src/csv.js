@@ -1,3 +1,4 @@
+import { downloadFile } from "./download.js";
 import { STATUS_LABELS } from "./components/StatusBadge.jsx";
 import { COMPANY_SIZE_LABELS } from "./components/companySize.js";
 
@@ -37,6 +38,7 @@ const APPLICATION_COLUMNS = [
   ["Next action date", (a) => a.next_action_date],
   ["Notes", (a) => a.notes],
   ["Job description", (a) => a.job_description],
+  ["Cover letter", (a) => a.cover_letter],
   ["Archived at", (a) => datetime(a.archived_at)],
   ["Created at", (a) => datetime(a.created_at)],
   ["Updated at", (a) => datetime(a.updated_at)],
@@ -118,13 +120,5 @@ export const csvFilename = (today = new Date()) =>
   `job-tracker-${today.toISOString().slice(0, 10)}.csv`;
 
 export function downloadCsv(text, filename) {
-  const blob = new Blob([CSV_BOM + text], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  downloadFile(CSV_BOM + text, filename, "text/csv;charset=utf-8");
 }

@@ -64,6 +64,27 @@ button:disabled {
 /* Green, and deliberately not the blue primary: Export produces a file rather
    than changing anything, so it should not read as the main action on the
    screen. It sits left of Add application, which stays the primary. */
+/* Reads as an action on the field above it rather than a button competing
+   with Save, which is the only primary action on this screen. */
+.link-button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  text-align: left;
+  align-self: flex-start;
+}
+
+.link-button:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+.link-button:disabled {
+  color: #9ca3af;
+}
+
 button.export {
   background: #16a34a;
 }
