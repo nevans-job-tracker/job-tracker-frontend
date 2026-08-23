@@ -21,20 +21,20 @@ describe("humaniseDuration", () => {
     [DAY - 1, "less than a day"],
     [DAY, "1 day"],
     [3 * DAY, "3 days"],
-    [13 * DAY, "13 days"],
-    [14 * DAY, "2 weeks"],
-    [21 * DAY, "3 weeks"],
-    [59 * DAY, "8 weeks"],
-    [60 * DAY, "2 months"],
-    [400 * DAY, "13 months"],
+    [7 * DAY, "7 days"],
+    [14 * DAY, "14 days"],
+    [59 * DAY, "59 days"],
+    [400 * DAY, "400 days"],
   ])("%i ms reads as %s", (ms, expected) => {
     expect(humaniseDuration(ms)).toBe(expected);
   });
 
-  it("says 7 days rather than 1 week", () => {
-    // Deliberately coarse only past a fortnight: a week into an application,
-    // "7 days" is the number you are actually counting.
-    expect(humaniseDuration(7 * DAY)).toBe("7 days");
+  it("never rolls days up into weeks or months", () => {
+    // "3 weeks" and "25 days" are the same span, but only one of them is the
+    // number you want when deciding whether to chase a recruiter.
+    for (const days of [14, 21, 30, 60, 90, 365]) {
+      expect(humaniseDuration(days * DAY)).toBe(`${days} days`);
+    }
   });
 
   it("never says 1 days", () => {
@@ -114,11 +114,11 @@ describe("StatusTimeline", () => {
   it("shows how long each status lasted", () => {
     render(
       <StatusTimeline
-        history={[change(1, "applied", 12), change(2, "interview", 5)]}
-        createdAt={at(12)}
+        history={[change(1, "applied", 40), change(2, "interview", 5)]}
+        createdAt={at(40)}
       />
     );
-    expect(screen.getByText("7 days")).toBeInTheDocument();
+    expect(screen.getByText("35 days")).toBeInTheDocument();
   });
 
   it("marks the running status as so far rather than finished", () => {

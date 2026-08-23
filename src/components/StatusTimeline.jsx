@@ -13,20 +13,18 @@ import { STATUS_LABELS } from "./StatusBadge.jsx";
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Deliberately coarse. A job search is measured in days and weeks, and "1 week"
- * is easier to act on than "8 days"; nobody chases a recruiter based on hours.
+ * Always a count of days — never rolled up into weeks or months.
+ *
+ * The rounding-up version reads more naturally in prose but loses the number
+ * you actually want: "3 weeks" and "25 days" are the same span, and only one
+ * of them tells you how long a recruiter has had your application. Days
+ * compare directly across entries and against each other without arithmetic.
  */
 export function humaniseDuration(ms) {
   if (ms < DAY) return "less than a day";
 
   const days = Math.floor(ms / DAY);
-  if (days < 14) return days === 1 ? "1 day" : `${days} days`;
-
-  const weeks = Math.floor(days / 7);
-  if (days < 60) return weeks === 1 ? "1 week" : `${weeks} weeks`;
-
-  const months = Math.floor(days / 30);
-  return months === 1 ? "1 month" : `${months} months`;
+  return days === 1 ? "1 day" : `${days} days`;
 }
 
 const shortDate = (iso) =>
