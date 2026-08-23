@@ -47,6 +47,11 @@ export async function listApplications(params = {}) {
   return handleResponse(res);
 }
 
+export async function getStatusHistory(id) {
+  const res = await fetch(`${API_URL}/applications/${id}/history`);
+  return handleResponse(res);
+}
+
 export async function getApplication(id) {
   const res = await fetch(`${API_URL}/applications/${id}`);
   return handleResponse(res);

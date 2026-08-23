@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listApplications,
   getApplication,
+  getStatusHistory,
   createApplication,
   updateApplication,
   archiveApplication,
@@ -66,6 +67,14 @@ describe("single application requests", () => {
   it("fetches one by id", async () => {
     await getApplication(7);
     expect(calledUrl()).toBe(`${BASE}/applications/7`);
+  });
+
+  it("fetches status history from its own endpoint", async () => {
+    // Its own request rather than embedded in the detail response: history is
+    // kept off ApplicationOut so the CSV export does not load it per row.
+    // Every page test mocks this module, so this is the only check on the URL.
+    await getStatusHistory(7);
+    expect(calledUrl()).toBe(`${BASE}/applications/7/history`);
   });
 
   it("posts a new application as JSON", async () => {

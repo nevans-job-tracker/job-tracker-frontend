@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ApplicationPage from "./ApplicationPage.jsx";
 import {
   getApplication,
+  getStatusHistory,
   createApplication,
   updateApplication,
   archiveApplication,
@@ -13,6 +14,7 @@ import {
 
 vi.mock("../api/client.js", () => ({
   getApplication: vi.fn(),
+  getStatusHistory: vi.fn(),
   createApplication: vi.fn(),
   updateApplication: vi.fn(),
   archiveApplication: vi.fn(),
@@ -63,6 +65,8 @@ const fillRequired = async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   getApplication.mockResolvedValue(EXISTING);
+  // The timeline has its own tests; most of these do not care about it.
+  getStatusHistory.mockResolvedValue([]);
 });
 
 describe("ApplicationPage — existing application", () => {
@@ -256,6 +260,55 @@ describe("ApplicationPage — new application", () => {
 
     expect(await screen.findByText("All applications list")).toBeInTheDocument();
     expect(createApplication).not.toHaveBeenCalled();
+  });
+});
+
+describe("ApplicationPage — status timeline (KAN-43)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString();
+
+  it("fetches history alongside the record, not embedded in it", async () => {
+    // Two requests on purpose: history is kept off ApplicationOut so the CSV
+    // export does not lazily load it per row.
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    expect(getStatusHistory).toHaveBeenCalledWith("7");
+  });
+
+  it("shows the timeline once history arrives", async () => {
+    getStatusHistory.mockResolvedValue([
+      { id: 1, from_status: null, to_status: "applied", changed_at: at(6) },
+      {
+        id: 2,
+        from_status: "applied",
+        to_status: "interview",
+        changed_at: at(2),
+      },
+    ]);
+    setup("/applications/7");
+
+    expect(await screen.findByText("Status history")).toBeInTheDocument();
+    expect(screen.getByText("4 days")).toBeInTheDocument();
+  });
+
+  it("renders no timeline for an application with no history", async () => {
+    getStatusHistory.mockResolvedValue([]);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    expect(screen.queryByText("Status history")).not.toBeInTheDocument();
+  });
+
+  it("shows no timeline on the new-entry screen", async () => {
+    setup("/applications/new");
+    await screen.findByText("New application");
+    expect(screen.queryByText("Status history")).not.toBeInTheDocument();
+    expect(getStatusHistory).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a history failure rather than rendering a broken page", async () => {
+    getStatusHistory.mockRejectedValue(new Error("Failed to fetch"));
+    setup("/applications/7");
+    expect(await screen.findByText("Failed to fetch")).toBeInTheDocument();
   });
 });
 

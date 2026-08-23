@@ -15,6 +15,7 @@ vi.mock("./api/client.js", () => ({
     salary_currency: "USD",
     contacts: [],
   }),
+  getStatusHistory: vi.fn().mockResolvedValue([]),
   createApplication: vi.fn(),
   updateApplication: vi.fn(),
   deleteApplication: vi.fn(),

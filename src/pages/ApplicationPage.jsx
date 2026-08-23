@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import {
   getApplication,
+  getStatusHistory,
   createApplication,
   updateApplication,
   archiveApplication,
@@ -9,6 +10,7 @@ import {
 } from "../api/client.js";
 import ApplicationForm from "../components/ApplicationForm.jsx";
 import ContactsEditor from "../components/ContactsEditor.jsx";
+import StatusTimeline from "../components/StatusTimeline.jsx";
 
 /**
  * Serves both the detail screen and the new-entry screen. With no :id it is a
@@ -31,6 +33,7 @@ export default function ApplicationPage() {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [history, setHistory] = useState([]);
 
   /**
    * The detail screen *is* the edit form (§4.4), so leaving it discards
@@ -75,11 +78,20 @@ export default function ApplicationPage() {
       // values — one Create away from a duplicate.
       setApplication(null);
       setError(null);
+      setHistory([]);
       setLoading(false);
       return;
     }
     try {
-      setApplication(await getApplication(id));
+      // Two requests rather than one embedded response: history is deliberately
+      // not on ApplicationOut, because that schema is what the CSV export reads
+      // and it would lazily load history per row. See StatusChangeOut.
+      const [record, changes] = await Promise.all([
+        getApplication(id),
+        getStatusHistory(id),
+      ]);
+      setApplication(record);
+      setHistory(changes);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -188,6 +200,10 @@ export default function ApplicationPage() {
         </p>
       ) : (
         <>
+          {/* Between the form and the contacts: the form is the application,
+              this is derived from it, contacts are related records. */}
+          <StatusTimeline history={history} createdAt={application.created_at} />
+
           <ContactsEditor
             applicationId={application.id}
             contacts={application.contacts || []}

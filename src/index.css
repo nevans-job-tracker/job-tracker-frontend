@@ -271,6 +271,67 @@ textarea {
   font-weight: 600;
 }
 
+.timeline {
+  margin-top: 28px;
+}
+
+.timeline h2 {
+  font-size: 1.1rem;
+  margin: 0 0 10px;
+}
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid #e5e7eb;
+}
+
+.timeline-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0 8px 14px;
+  position: relative;
+}
+
+.timeline-list li::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.timeline-current::before {
+  background: #2563eb;
+}
+
+.timeline-from,
+.timeline-duration {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.timeline-duration {
+  margin-left: auto;
+}
+
+.timeline-current .timeline-duration {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.timeline-note {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 8px 0 0;
+}
+
 .contacts {
   margin-top: 28px;
 }
