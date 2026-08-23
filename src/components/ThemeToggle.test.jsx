@@ -105,13 +105,32 @@ describe("ThemeToggle", () => {
     expect(readTheme()).toBe("light");
   });
 
-  it("says which way it will switch, not which mode is on", async () => {
-    // A moon alone is ambiguous — it could mean "is dark" or "go dark".
+  it("names where it goes, not where you are", async () => {
+    // A control reading "Dark mode" while the page is already dark is the
+    // ambiguity that makes these annoying.
+    render(<ThemeToggle />);
+    expect(button()).toHaveTextContent("Dark mode");
+
+    await userEvent.click(button());
+    expect(button()).toHaveTextContent("Light mode");
+  });
+
+  it("carries a label rather than an icon alone", async () => {
     render(<ThemeToggle />);
     expect(button()).toHaveAccessibleName("Switch to dark mode");
 
     await userEvent.click(button());
     expect(button()).toHaveAccessibleName("Switch to light mode");
+  });
+
+  it("keeps the visible text inside the accessible name", () => {
+    // Otherwise the two disagree for anyone driving this by voice. The icon is
+    // aria-hidden and not part of what anyone would say, so it is excluded.
+    render(<ThemeToggle />);
+    const name = button().getAttribute("aria-label").toLowerCase();
+    const spoken = button().textContent.replace(/[^a-z\s]/gi, "").trim().toLowerCase();
+    expect(spoken).not.toBe("");
+    expect(name).toContain(spoken);
   });
 
   it("reports its state to assistive technology", async () => {

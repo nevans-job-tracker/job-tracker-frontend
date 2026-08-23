@@ -26,6 +26,9 @@
   --success: #16a34a;
   --success-hover: #15803d;
 
+  --accent-fg: #fff;
+  --field: #fff;
+
   --shadow: rgba(0, 0, 0, 0.08);
 
   --badge-neutral-bg: #e5e7eb;
@@ -69,6 +72,9 @@
   --danger-hover: #f87171;
   --success: #22c55e;
   --success-hover: #4ade80;
+
+  --accent-fg: #0b1220;
+  --field: #12151c;
 
   --shadow: rgba(0, 0, 0, 0.5);
 
@@ -137,7 +143,7 @@ h1 {
 
 button {
   background: var(--accent);
-  color: white;
+  color: var(--accent-fg);
   border: none;
   padding: 8px 14px;
   border-radius: 6px;
@@ -198,19 +204,31 @@ button:disabled {
   gap: 14px;
 }
 
-/* Sized for a touch target rather than inheriting the link-button's text
-   metrics — it sits between two real buttons and is the smallest thing in the
-   header. */
+/* A real control rather than a bare glyph: it sits beside two solid buttons
+   and an icon on its own is doubly ambiguous — a moon could mean "is dark" or
+   "go dark". Outlined rather than filled so it does not compete with Export
+   and Add, which are the actions that change something. */
 .theme-toggle {
-  font-size: 1.15rem;
-  line-height: 1;
-  padding: 6px 8px;
-  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
 }
 
-.theme-toggle:hover:not(:disabled) {
+.theme-toggle:hover {
+  background: var(--surface-subtle);
   color: var(--text);
-  text-decoration: none;
+  border-color: var(--text-muted);
+}
+
+.theme-toggle span {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .link-button {
@@ -278,6 +296,8 @@ select,
 input,
 textarea {
   padding: 8px 10px;
+  background: var(--field);
+  color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   font-size: 0.9rem;
@@ -293,7 +313,7 @@ textarea {
 .app-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px var(--shadow);
@@ -457,7 +477,7 @@ textarea {
 }
 
 .contact-card {
-  background: white;
+  background: var(--surface);
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 10px;
@@ -500,7 +520,7 @@ textarea {
 }
 
 .app-form {
-  background: white;
+  background: var(--surface);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
