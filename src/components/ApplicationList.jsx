@@ -1,4 +1,5 @@
 import StatusBadge from "./StatusBadge.jsx";
+import { isOpenableLink } from "../jobLink.js";
 
 /**
  * Thousands, with a K — 106400 becomes "106K", rounded to nearest.
@@ -65,6 +66,7 @@ export default function ApplicationList({
       <thead>
         <tr>
           <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
+          <th className="col-wide col-link">Link</th>
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}
           </th>
@@ -92,6 +94,12 @@ export default function ApplicationList({
             tabIndex={0}
             onClick={() => onOpen(app)}
             onKeyDown={(e) => {
+              // Only when the row itself has focus. The link inside it is
+              // separately focusable, and this handler calls preventDefault —
+              // so without this guard, Enter on the link would suppress the
+              // anchor's own activation and navigate to the detail screen
+              // instead of opening the posting.
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onOpen(app);
@@ -99,6 +107,26 @@ export default function ApplicationList({
             }}
           >
             <td>{app.company}</td>
+            <td className="col-wide col-link">
+              {isOpenableLink(app.job_link) ? (
+                <a
+                  href={app.job_link}
+                  target="_blank"
+                  // noopener: without it the opened page gets a handle on
+                  // window.opener and can navigate this tab elsewhere.
+                  rel="noopener noreferrer"
+                  className="link-out"
+                  // The glyph is identical on every row, so the company is
+                  // what makes one link distinguishable from another.
+                  aria-label={`Open the posting for ${app.company} in a new tab`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  ↗
+                </a>
+              ) : (
+                "—"
+              )}
+            </td>
             <td className="col-wide">{app.role_title}</td>
             <td className="col-wide">{app.location || "—"}</td>
             <td className="col-wide">{app.source || "—"}</td>

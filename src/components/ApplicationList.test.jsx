@@ -8,6 +8,7 @@ const APPLICATIONS = [
     id: 1,
     company: "Northwind",
     role_title: "QA Engineer",
+    job_link: "https://northwind.example/jobs/1",
     location: "Austin, TX",
     source: "LinkedIn",
     status: "applied",
@@ -22,6 +23,7 @@ const APPLICATIONS = [
     id: 2,
     company: "Globex",
     role_title: "Senior QA Engineer",
+    job_link: null,
     location: null,
     source: null,
     status: "offer",
@@ -234,5 +236,76 @@ describe("ApplicationList", () => {
       expect(within(row).getByText("Interested")).toBeInTheDocument();
       expect(within(row).getAllByText("—").length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("the job posting link (KAN-45)", () => {
+  const link = () =>
+    screen.getByRole("link", {
+      name: "Open the posting for Northwind in a new tab",
+    });
+
+  it("opens the posting in a new tab", () => {
+    setup();
+    expect(link()).toHaveAttribute("href", "https://northwind.example/jobs/1");
+    expect(link()).toHaveAttribute("target", "_blank");
+  });
+
+  it("does not hand the opened page a handle on this one", () => {
+    // Without noopener the posting can navigate the tab it was opened from.
+    setup();
+    expect(link()).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("names the company, since the glyph is the same on every row", () => {
+    setup();
+    expect(
+      screen.queryByRole("link", {
+        name: "Open the posting for Globex in a new tab",
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders no link for an application without one", () => {
+    setup();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("renders no link for a value that is not http(s)", () => {
+    // The column is still writable through the API, so a stored
+    // "javascript:..." must not become a live anchor.
+    setup({
+      applications: [{ ...APPLICATIONS[0], job_link: "javascript:alert(1)" }],
+    });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("does not also open the detail screen when clicked", async () => {
+    const { onOpen } = setup();
+    await userEvent.click(link());
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rest of the row opening the detail screen", async () => {
+    const { onOpen } = setup();
+    await userEvent.click(screen.getByText("Northwind"));
+    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+  });
+
+  it("does not navigate the row when the link is activated by keyboard", async () => {
+    // The row's handler calls preventDefault, so without a guard on the event
+    // target, Enter here would suppress the anchor and open the detail screen
+    // instead — the opposite of what was pressed.
+    const { onOpen } = setup();
+    link().focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("still opens the detail screen from the row itself", async () => {
+    const { onOpen } = setup();
+    screen.getByText("Northwind").closest("tr").focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
   });
 });

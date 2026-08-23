@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 import { COMPANY_SIZE_OPTIONS, COMPANY_SIZE_LABELS } from "./companySize.js";
+import { isOpenableLink } from "../jobLink.js";
 import CoverLetterField from "./CoverLetterField.jsx";
 
 const emptyForm = {
@@ -160,15 +161,30 @@ export default function ApplicationForm({
       </div>
 
       <div className="form-row">
-        <label>
-          Job link
-          <input
-            type="url"
-            placeholder="https://..."
-            value={form.job_link}
-            onChange={(e) => update("job_link", e.target.value)}
-          />
-        </label>
+        {/* The anchor is a sibling of the label, not a child of it. Nested
+            inside, it would join the input's accessible name ("Job link Open
+            posting") and clicking it would also focus the input. */}
+        <div className="form-field">
+          <label>
+            Job link
+            <input
+              type="url"
+              placeholder="https://..."
+              value={form.job_link}
+              onChange={(e) => update("job_link", e.target.value)}
+            />
+          </label>
+          {isOpenableLink(form.job_link) && (
+            <a
+              href={form.job_link.trim()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="field-action"
+            >
+              Open posting ↗
+            </a>
+          )}
+        </div>
         <label>
           Source
           <input

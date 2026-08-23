@@ -341,6 +341,34 @@ textarea {
   white-space: nowrap;
 }
 
+/* KAN-45: the link column is an icon, so it needs no more width than one. */
+.app-table .col-link {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  cursor: default;
+}
+
+.link-out {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.link-out:hover {
+  background: var(--field);
+  text-decoration: none;
+}
+
+.link-out:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .load-more {
   display: flex;
   justify-content: center;
@@ -549,6 +577,31 @@ textarea {
   min-width: 0;
   font-size: 0.82rem;
   color: var(--text-secondary);
+}
+
+/* KAN-45: wraps a field plus an action beneath it. Sized exactly like a
+   label so the surrounding form-row lays out unchanged. */
+.form-row .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.form-row .form-field label {
+  flex: 0 0 auto;
+}
+
+.field-action {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.field-action:hover {
+  text-decoration: underline;
 }
 
 .form-notes {

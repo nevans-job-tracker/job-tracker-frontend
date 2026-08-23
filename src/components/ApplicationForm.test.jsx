@@ -456,3 +456,47 @@ describe("ApplicationForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
+
+const RECORD = { id: 1, company: "Acme", role_title: "QA Engineer" };
+
+describe("the job posting link on the detail screen (KAN-45)", () => {
+  const openPosting = () => screen.queryByRole("link", { name: /open posting/i });
+
+  it("offers a link once the field holds a URL", () => {
+    setup({ initial: { ...RECORD, job_link: "https://example.com/jobs/7" } });
+    expect(openPosting()).toHaveAttribute("href", "https://example.com/jobs/7");
+    expect(openPosting()).toHaveAttribute("target", "_blank");
+    expect(openPosting()).toHaveAttribute(
+      "rel",
+      expect.stringContaining("noopener")
+    );
+  });
+
+  it("offers nothing when there is no link", () => {
+    setup({ initial: { ...RECORD, job_link: null } });
+    expect(openPosting()).not.toBeInTheDocument();
+  });
+
+  it("appears as soon as a pasted URL is valid, without saving first", async () => {
+    setup({ initial: { ...RECORD, job_link: null } });
+    await userEvent.type(
+      screen.getByLabelText("Job link"),
+      "https://example.com/x"
+    );
+    expect(openPosting()).toBeInTheDocument();
+  });
+
+  it("stays absent while a URL is half-typed", async () => {
+    // This renders unsaved form state, so the API's own validation has not run.
+    setup({ initial: { ...RECORD, job_link: null } });
+    await userEvent.type(screen.getByLabelText("Job link"), "example.com");
+    expect(openPosting()).not.toBeInTheDocument();
+  });
+
+  it("keeps the link out of the input's accessible name", () => {
+    // It is a sibling of the label rather than a child; nested, it would be
+    // read as part of the field's name.
+    setup({ initial: { ...RECORD, job_link: "https://example.com/jobs/7" } });
+    expect(screen.getByLabelText("Job link")).toHaveAccessibleName("Job link");
+  });
+});
