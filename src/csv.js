@@ -1,4 +1,5 @@
 import { downloadFile } from "./download.js";
+import { htmlToText } from "./coverLetter.js";
 import { STATUS_LABELS } from "./components/StatusBadge.jsx";
 import { COMPANY_SIZE_LABELS } from "./components/companySize.js";
 
@@ -38,7 +39,8 @@ const APPLICATION_COLUMNS = [
   ["Next action date", (a) => a.next_action_date],
   ["Notes", (a) => a.notes],
   ["Job description", (a) => a.job_description],
-  ["Cover letter", (a) => a.cover_letter],
+  // Prose, not markup — a cell full of <p> tags is noise in a spreadsheet.
+  ["Cover letter", (a) => htmlToText(a.cover_letter)],
   ["Archived at", (a) => datetime(a.archived_at)],
   ["Created at", (a) => datetime(a.created_at)],
   ["Updated at", (a) => datetime(a.updated_at)],

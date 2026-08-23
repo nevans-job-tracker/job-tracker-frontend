@@ -56,11 +56,19 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   This mirrors the API's own rule rather than duplicating it. The form always
   sends a status, so without it the select would read Applied while an undated
   record is anything but.
-- **The cover letter is plain text, and its HTML is generated at download
-  time** (KAN-40), not stored. Every character goes through `escapeHtml`, which
-  is what makes `coverLetter.js` safe without a sanitiser — there is nothing
-  persisted that could execute. KAN-41 changes that, and brings the sanitiser
-  with it.
+- **The cover letter column holds prose *or* HTML**, and `toDisplayHtml` in
+  `coverLetter.js` is the single place that reconciles them (KAN-40, KAN-41).
+  There is no format flag on the row and no migration — `Text` holds both, and
+  anything not recognised as our HTML is escaped as text.
+- **`sanitiseHtml` is the only thing standing between stored markup and
+  `dangerouslySetInnerHTML`.** It runs on the way in from a `.docx` and again on
+  the way out. `IMG` is deliberately absent from its allowlist: mammoth inlines
+  embedded images as base64 data URIs, so a letterhead logo would turn a 2 KB
+  column into 100 KB+ and then sit in every nightly backup.
+- **mammoth is loaded with a dynamic `import()`** so Vite code-splits it. It is
+  130 KB gzipped — most of the app again — and someone who never uploads a
+  `.docx` never fetches a byte. Keep it that way: a static import would put it
+  in everyone's initial load.
 - **Mobile matters.** The app is used from a phone on the LAN, so responsive
   layout is a requirement, not a nicety.
 
@@ -84,5 +92,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 254 tests, 99% statements, 100% functions
+npm test      # 286 tests, 99% statements, 100% functions
 ```

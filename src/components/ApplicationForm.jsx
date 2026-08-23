@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
 import { COMPANY_SIZE_OPTIONS, COMPANY_SIZE_LABELS } from "./companySize.js";
-import { downloadCoverLetter } from "../coverLetter.js";
+import CoverLetterField from "./CoverLetterField.jsx";
 
 const emptyForm = {
   company: "",
@@ -306,26 +306,11 @@ export default function ApplicationForm({
         />
       </label>
 
-      <label className="form-notes">
-        Cover letter
-        <textarea
-          rows={8}
-          placeholder="What you wrote to this employer. A PDF can be regenerated from it."
-          value={form.cover_letter}
-          onChange={(e) => update("cover_letter", e.target.value)}
-        />
-        {/* Downloads what is on screen rather than what was last saved, so an
-            edit can be exported without saving first. HTML because that is
-            what opens in Word with the paragraphs intact. */}
-        <button
-          type="button"
-          className="link-button"
-          disabled={!form.cover_letter.trim()}
-          onClick={() => downloadCoverLetter(form.cover_letter, form.company)}
-        >
-          Download as HTML
-        </button>
-      </label>
+      <CoverLetterField
+        value={form.cover_letter}
+        company={form.company}
+        onChange={(next) => update("cover_letter", next)}
+      />
 
       <div className="form-actions">
         <button type="button" onClick={onCancel} disabled={saving}>

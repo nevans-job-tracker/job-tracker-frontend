@@ -66,6 +66,45 @@ button:disabled {
    screen. It sits left of Add application, which stays the primary. */
 /* Reads as an action on the field above it rather than a button competing
    with Save, which is the only primary action on this screen. */
+.cover-letter {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.cover-letter-label {
+  font-size: 0.85rem;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+/* Rendered rather than editable, so it reads as the letter instead of its
+   markup. Bordered like an input so it still looks like a field. */
+.cover-letter-preview {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px 14px;
+  min-height: 120px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  font: 0.9rem/1.6 Georgia, "Times New Roman", serif;
+}
+
+.cover-letter-preview p {
+  margin: 0 0 0.8em;
+}
+
+.cover-letter-preview :last-child {
+  margin-bottom: 0;
+}
+
+.cover-letter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
 .link-button {
   background: none;
   border: none;

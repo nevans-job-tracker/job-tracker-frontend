@@ -5,9 +5,12 @@ import ApplicationForm from "./ApplicationForm.jsx";
 import { STATUS_LABELS } from "./StatusBadge.jsx";
 import { COMPANY_SIZE_LABELS } from "./companySize.js";
 
-// The HTML generation is covered in coverLetter.test.js; here the only
-// question is whether the button hands it the right arguments.
-vi.mock("../coverLetter.js", () => ({ downloadCoverLetter: vi.fn() }));
+// Only the browser handover is stubbed. The conversion and sanitising stay
+// real, so these exercise what the field actually renders.
+vi.mock("../coverLetter.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadCoverLetter: vi.fn(),
+}));
 
 function setup(props = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -235,12 +238,10 @@ describe("ApplicationForm", () => {
     expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("salary_currency");
   });
 
-  describe("cover letter (KAN-40)", () => {
-    const field = () => screen.getByLabelText(/cover letter/i);
-    const downloadButton = () =>
-      screen.getByRole("button", { name: /download as html/i });
-
-    it("submits what was typed", async () => {
+  describe("cover letter", () => {
+    // The field's own behaviour lives in CoverLetterField.test.jsx. What
+    // belongs here is only that the form wires it up and submits its value.
+    it("submits what the field reports", async () => {
       const { onSubmit } = setup();
       fireEvent.change(screen.getByLabelText(/^company \*$/i), {
         target: { value: "Acme Corp" },
@@ -248,7 +249,9 @@ describe("ApplicationForm", () => {
       fireEvent.change(screen.getByLabelText(/role title/i), {
         target: { value: "QA Engineer" },
       });
-      fireEvent.change(field(), { target: { value: "Dear Hiring Manager," } });
+      fireEvent.change(screen.getByLabelText(/cover letter/i), {
+        target: { value: "Dear Hiring Manager," },
+      });
       await submit();
       expect(onSubmit.mock.calls[0][0].cover_letter).toBe("Dear Hiring Manager,");
     });
@@ -265,36 +268,14 @@ describe("ApplicationForm", () => {
       expect(onSubmit.mock.calls[0][0].cover_letter).toBeNull();
     });
 
-    it("populates from an existing record", () => {
-      setup({ initial: { company: "Northwind", cover_letter: "Dear all," } });
-      expect(field()).toHaveValue("Dear all,");
-    });
-
-    it("cannot be downloaded when there is nothing to download", () => {
-      // A file containing an empty document is a puzzle, not a deliverable.
-      setup();
-      expect(downloadButton()).toBeDisabled();
-    });
-
-    it("stays disabled for whitespace alone", () => {
-      setup({ initial: { company: "Northwind", cover_letter: "   \n  " } });
-      expect(downloadButton()).toBeDisabled();
-    });
-
-    it("offers the download once there is text", () => {
-      setup({ initial: { company: "Northwind", cover_letter: "Dear all," } });
-      expect(downloadButton()).toBeEnabled();
-    });
-
-    it("downloads what is on screen, not what was last saved", async () => {
-      // Exporting an edit without saving first is the useful behaviour, and it
-      // avoids handing over a stale file.
-      const { downloadCoverLetter } = await import("../coverLetter.js");
-      setup({ initial: { company: "Northwind", cover_letter: "old text" } });
-      fireEvent.change(field(), { target: { value: "new text" } });
-      await userEvent.click(downloadButton());
-
-      expect(downloadCoverLetter).toHaveBeenCalledWith("new text", "Northwind");
+    it("shows a saved letter without a textarea to hand-edit markup in", () => {
+      setup({ initial: { company: "Northwind", cover_letter: "<p>Dear all,</p>" } });
+      expect(screen.getByText("Dear all,")).toBeInTheDocument();
+      // The preview is still labelled "Cover letter" — what must be absent is
+      // anything editable, since hand-editing markup is not a thing to offer.
+      expect(
+        screen.queryByRole("textbox", { name: /cover letter/i })
+      ).not.toBeInTheDocument();
     });
   });
 
