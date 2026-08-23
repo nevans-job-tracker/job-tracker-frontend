@@ -92,5 +92,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 318 tests, 99% statements, 100% functions
+npm test      # 337 tests, 99% statements, 100% functions
 ```

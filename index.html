@@ -4,6 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Job Tracker</title>
+    <!--
+      Applies the theme before anything paints (KAN-44).
+
+      This is the one piece of application logic that cannot live in React.
+      Setting data-theme from a useEffect means the browser paints the light
+      palette first and then repaints dark, so every load flashes white — worst
+      on a phone at night, which is the entire case for the feature.
+
+      Kept deliberately small and dependency-free: it mirrors readTheme() in
+      src/theme.js, and the two must agree on the storage key.
+    -->
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem("job-tracker-theme");
+        } catch (e) {
+          /* private browsing can make this throw; fall through to the OS */
+        }
+        var dark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.setAttribute(
+          "data-theme",
+          dark ? "dark" : "light"
+        );
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

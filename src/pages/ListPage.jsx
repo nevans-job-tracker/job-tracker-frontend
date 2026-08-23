@@ -4,6 +4,7 @@ import { listApplications } from "../api/client.js";
 import { toCsv, csvFilename, downloadCsv } from "../csv.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 
 const PAGE_SIZE = 50;
 
@@ -147,6 +148,7 @@ export default function ListPage() {
       <header>
         <h1>Job Application Tracker</h1>
         <div className="header-actions">
+          <ThemeToggle />
           {/* Disabled on an empty result: a file of nothing but headers is a
               puzzle rather than a deliverable. */}
           <button

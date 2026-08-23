@@ -11,6 +11,7 @@ import {
 import ApplicationForm from "../components/ApplicationForm.jsx";
 import ContactsEditor from "../components/ContactsEditor.jsx";
 import StatusTimeline from "../components/StatusTimeline.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
 
 /**
  * Serves both the detail screen and the new-entry screen. With no :id it is a
@@ -171,6 +172,7 @@ export default function ApplicationPage() {
         </div>
         <div className="header-actions">
           {saved && <span className="saved-flag">Saved</span>}
+          <ThemeToggle />
           {/* Deliberately absent on the new-entry screen: it would navigate to
               the route already showing, so it would either do nothing or
               silently wipe what has been typed. There is nothing to add to

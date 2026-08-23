@@ -1,12 +1,105 @@
+/* Theme tokens (KAN-44).
+ *
+ * Named by role rather than by value, so the dark palette below overrides
+ * meaning rather than guessing at colours. Every colour in this file goes
+ * through one of these; a literal anywhere else is a bug.
+ *
+ * `data-theme` is stamped on <html> by an inline script in index.html before
+ * React mounts — see the comment there for why it cannot wait for a useEffect.
+ */
+:root {
+  --bg: #f7f7f8;
+  --surface: #fff;
+  --surface-subtle: #f9fafb;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  --text: #1a1a1a;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-disabled: #9ca3af;
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --success: #16a34a;
+  --success-hover: #15803d;
+
+  --shadow: rgba(0, 0, 0, 0.08);
+
+  --badge-neutral-bg: #e5e7eb;
+  --badge-neutral-fg: #4b5563;
+  --badge-interested-bg: #cffafe;
+  --badge-interested-fg: #155e75;
+  --badge-applied-bg: #dbeafe;
+  --badge-applied-fg: #1e40af;
+  --badge-phone-bg: #fef3c7;
+  --badge-phone-fg: #92400e;
+  --badge-interview-bg: #fde68a;
+  --badge-interview-fg: #78350f;
+  --badge-offer-bg: #d1fae5;
+  --badge-offer-fg: #065f46;
+  --badge-rejected-bg: #fee2e2;
+  --badge-rejected-fg: #991b1b;
+  --badge-withdrawn-bg: #ede9fe;
+  --badge-withdrawn-fg: #5b21b6;
+}
+
+/* The badges are not inverted mechanically. Flipping a light tint to its dark
+   equivalent by formula produces eight colours that glare against the page;
+   each pair below was chosen to sit at roughly the same visual weight as the
+   surface it lands on, keeping the lifecycle's blue -> amber -> green run
+   readable. */
+:root[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-subtle: #1c2028;
+  --border: #2a2f3a;
+  --border-strong: #3a4150;
+
+  --text: #e6e8eb;
+  --text-secondary: #c3c8d0;
+  --text-muted: #9aa2af;
+  --text-disabled: #6b7280;
+
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --danger: #ef4444;
+  --danger-hover: #f87171;
+  --success: #22c55e;
+  --success-hover: #4ade80;
+
+  --shadow: rgba(0, 0, 0, 0.5);
+
+  --badge-neutral-bg: #2a2f3a;
+  --badge-neutral-fg: #cbd5e1;
+  --badge-interested-bg: #0e3f4a;
+  --badge-interested-fg: #a5f3fc;
+  --badge-applied-bg: #1e3a8a;
+  --badge-applied-fg: #bfdbfe;
+  --badge-phone-bg: #4a3209;
+  --badge-phone-fg: #fde68a;
+  --badge-interview-bg: #5a4409;
+  --badge-interview-fg: #fcd34d;
+  --badge-offer-bg: #064e3b;
+  --badge-offer-fg: #a7f3d0;
+  --badge-rejected-bg: #4c1d1d;
+  --badge-rejected-fg: #fecaca;
+  --badge-withdrawn-bg: #3b2a63;
+  --badge-withdrawn-fg: #ddd6fe;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f7f7f8;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .container {
@@ -43,7 +136,7 @@ h1 {
 }
 
 button {
-  background: #2563eb;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 8px 14px;
@@ -53,7 +146,7 @@ button {
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: var(--accent-hover);
 }
 
 button:disabled {
@@ -74,20 +167,20 @@ button:disabled {
 
 .cover-letter-label {
   font-size: 0.85rem;
-  color: #374151;
+  color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
 /* Rendered rather than editable, so it reads as the letter instead of its
    markup. Bordered like an input so it still looks like a field. */
 .cover-letter-preview {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 12px 14px;
   min-height: 120px;
   max-height: 320px;
   overflow-y: auto;
-  background: #fff;
+  background: var(--surface);
   font: 0.9rem/1.6 Georgia, "Times New Roman", serif;
 }
 
@@ -105,10 +198,25 @@ button:disabled {
   gap: 14px;
 }
 
+/* Sized for a touch target rather than inheriting the link-button's text
+   metrics — it sits between two real buttons and is the smallest thing in the
+   header. */
+.theme-toggle {
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 6px 8px;
+  color: var(--text-muted);
+}
+
+.theme-toggle:hover:not(:disabled) {
+  color: var(--text);
+  text-decoration: none;
+}
+
 .link-button {
   background: none;
   border: none;
-  color: #2563eb;
+  color: var(--accent);
   padding: 4px 0;
   font-size: 0.85rem;
   text-align: left;
@@ -121,23 +229,23 @@ button:disabled {
 }
 
 .link-button:disabled {
-  color: #9ca3af;
+  color: var(--text-disabled);
 }
 
 button.export {
-  background: #16a34a;
+  background: var(--success);
 }
 
 button.export:hover {
-  background: #15803d;
+  background: var(--success-hover);
 }
 
 button.danger {
-  background: #dc2626;
+  background: var(--danger);
 }
 
 button.danger:hover {
-  background: #b91c1c;
+  background: var(--danger-hover);
 }
 
 .row-actions button {
@@ -162,7 +270,7 @@ button.danger:hover {
   flex: 1 1 200px;
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
 }
 
@@ -170,14 +278,14 @@ select,
 input,
 textarea {
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
 }
 
 .result-count {
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin: 8px 0;
 }
@@ -188,19 +296,19 @@ textarea {
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .app-table th,
 .app-table td {
   padding: 10px 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
   font-size: 0.88rem;
 }
 
 .app-table th {
-  background: #f3f4f6;
+  background: var(--surface-subtle);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -231,7 +339,7 @@ textarea {
 
 .empty-state {
   text-align: center;
-  color: #6b7280;
+  color: var(--text-muted);
   padding: 40px 0;
 }
 
@@ -240,31 +348,31 @@ textarea {
 }
 
 .row-clickable:hover {
-  background: #f9fafb;
+  background: var(--surface-subtle);
 }
 
 .row-clickable:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 .cell-sub {
   display: block;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.78rem;
 }
 
 .back-link {
   display: inline-block;
-  color: #2563eb;
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.85rem;
   margin-bottom: 4px;
 }
 
 .saved-flag {
-  color: #065f46;
-  background: #d1fae5;
+  color: var(--badge-offer-fg);
+  background: var(--badge-offer-bg);
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.8rem;
@@ -284,7 +392,7 @@ textarea {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-left: 2px solid #e5e7eb;
+  border-left: 2px solid var(--border);
 }
 
 .timeline-list li {
@@ -304,17 +412,17 @@ textarea {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--border-strong);
 }
 
 .timeline-current::before {
-  background: #2563eb;
+  background: var(--accent);
 }
 
 .timeline-from,
 .timeline-duration {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .timeline-duration {
@@ -322,13 +430,13 @@ textarea {
 }
 
 .timeline-current .timeline-duration {
-  color: #1e40af;
+  color: var(--badge-applied-fg);
   font-weight: 600;
 }
 
 .timeline-note {
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--text-muted);
   margin: 8px 0 0;
 }
 
@@ -353,7 +461,7 @@ textarea {
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .contact-summary {
@@ -378,7 +486,7 @@ textarea {
 }
 
 .contact-details dt {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .contact-details dd {
@@ -388,7 +496,7 @@ textarea {
 .danger-zone {
   margin-top: 32px;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
 }
 
 .app-form {
@@ -396,7 +504,7 @@ textarea {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 /* Wraps rather than overflowing. Without flex-wrap, rows of two or three
@@ -420,7 +528,7 @@ textarea {
   flex: 1 1 220px;
   min-width: 0;
   font-size: 0.82rem;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .form-notes {
@@ -435,8 +543,8 @@ textarea {
 }
 
 .form-warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--badge-phone-bg);
+  color: var(--badge-phone-fg);
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -444,8 +552,8 @@ textarea {
 }
 
 .form-error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--badge-rejected-bg);
+  color: var(--badge-rejected-fg);
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 10px;
@@ -458,42 +566,46 @@ textarea {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--badge-neutral-bg);
+  color: var(--badge-neutral-fg);
   text-transform: capitalize;
 }
 
 /* Teal, deliberately outside the blue→amber→green run the lifecycle statuses
-   use: an Interested row has not entered that progression yet. */
+   use: an Interested row has not entered that progression yet.
+
+   Every badge is a light tint with dark text. The dark palette does not invert
+   these mechanically — a mechanical invert glares on a dark page — so each
+   carries its own pair, dark tint with light text. */
 .badge-interested {
-  background: #cffafe;
-  color: #155e75;
+  background: var(--badge-interested-bg);
+  color: var(--badge-interested-fg);
 }
 .badge-applied {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--badge-applied-bg);
+  color: var(--badge-applied-fg);
 }
 .badge-phone_screen {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--badge-phone-bg);
+  color: var(--badge-phone-fg);
 }
 .badge-interview {
-  background: #fde68a;
-  color: #78350f;
+  background: var(--badge-interview-bg);
+  color: var(--badge-interview-fg);
 }
 .badge-offer {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--badge-offer-bg);
+  color: var(--badge-offer-fg);
 }
 .badge-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--badge-rejected-bg);
+  color: var(--badge-rejected-fg);
 }
 .badge-ghosted {
-  background: #e5e7eb;
-  color: #4b5563;
+  background: var(--badge-neutral-bg);
+  color: var(--badge-neutral-fg);
 }
 .badge-withdrawn {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--badge-withdrawn-bg);
+  color: var(--badge-withdrawn-fg);
 }
