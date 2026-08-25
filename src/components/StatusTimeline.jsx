@@ -1,4 +1,4 @@
-import { STATUS_LABELS } from "./StatusBadge.jsx";
+import { STATUS_LABELS } from "../labels.js";
 
 /**
  * How long an application sat in each status (KAN-43), read from the history

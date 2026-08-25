@@ -43,14 +43,16 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   `load()` does this; anything added there has to do the same.
 - The list is a sortable, searchable, filterable table. Column visibility is
   responsive — see `REQUIREMENTS.md` §4.2.
-- **`STATUS_LABELS` in `StatusBadge.jsx` is the only place a status is spelled
-  for a human** (KAN-34). Both dropdowns and the badge read it, and its
-  declaration order is the order the dropdowns offer — which is why
-  `interested` leads even though the database appends it.
-- **`COMPANY_SIZE_LABELS` in `components/companySize.js`** is the same pattern
-  as `STATUS_LABELS`, applied from the start rather than after a cleanup. Its
-  declaration order matches the backend enum, smallest to largest. If a third
-  such map appears, they belong together in one module.
+- **`src/labels.js` is the only place a stored enum value is spelled for a
+  human** (KAN-34, consolidated in KAN-49). It holds `STATUS_LABELS`,
+  `COMPANY_SIZE_LABELS`, `PAY_PERIOD_LABELS` and `EMPLOYMENT_TYPE_LABELS`. A
+  new enum's labels go here too — the note that used to say "if a third such
+  map appears, they belong together" is what created this file.
+- **Declaration order is load-bearing in all four, for two different reasons.**
+  `STATUS_LABELS` orders for the *dropdown* and deliberately disagrees with the
+  database — `interested` leads here and is appended there. The other three
+  match their backend enum, which is what makes sorting those columns mean
+  anything on MariaDB.
 - **On a new record the status follows the date until the user picks one**
   (KAN-31): clearing Date applied shows Interested, entering one shows Applied.
   This mirrors the API's own rule rather than duplicating it. The form always
@@ -92,5 +94,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 337 tests, 99% statements, 100% functions
+npm test      # 401 tests, 99% statements, 100% functions
 ```

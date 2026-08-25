@@ -1,5 +1,6 @@
 import StatusBadge from "./StatusBadge.jsx";
 import { isOpenableLink } from "../jobLink.js";
+import { EMPLOYMENT_TYPE_LABELS } from "../labels.js";
 
 /**
  * Thousands, with a K — 106400 becomes "106K", rounded to nearest.
@@ -16,25 +17,39 @@ function formatAmount(value) {
  * List display only — the detail screen keeps raw numbers in its editable
  * fields, and the stored decimal(10,2) is untouched either way.
  *
- * The currency is omitted for USD, which every job in this search pays in, so
- * the suffix would be noise on every row of a column that only survives on
- * wider screens (§4.2). Anything else still labels itself rather than showing
- * a misleading bare number.
+ * Three rules, each decided rather than incidental:
+ *
+ *   - **An hourly rate is never scaled to thousands** and carries "/hr"
+ *     (KAN-50). Before pay_period existed, magnitude was the only thing
+ *     telling the two apart, and 86 rendered as a bare "86-86" that said
+ *     nothing about being a rate.
+ *   - **A single figure is shown once**, not as "120K-120K". True of an
+ *     hourly 86-86 and of the annual row that carries the same number twice.
+ *   - **The currency is omitted for USD** (§4.2), which every job in this
+ *     search pays in, so the suffix would be noise on every row. Anything
+ *     else still labels itself rather than showing a misleading bare number.
  */
 function formatSalary(app) {
   if (!app.salary_min && !app.salary_max) return "—";
 
-  const suffix =
+  const hourly = app.pay_period === "hourly";
+  // An hourly rate is never in the thousands, so the K-notation would be
+  // wrong rather than merely unhelpful.
+  const one = (v) => (hourly ? Number(v).toLocaleString() : formatAmount(v));
+
+  const { salary_min: lo, salary_max: hi } = app;
+  const amount =
+    lo && hi && Number(lo) !== Number(hi)
+      ? `${one(lo)}–${one(hi)}`
+      : one(lo || hi);
+
+  const rate = hourly ? "/hr" : "";
+  const currency =
     app.salary_currency && app.salary_currency !== "USD"
       ? ` ${app.salary_currency}`
       : "";
 
-  const amount =
-    app.salary_min && app.salary_max
-      ? `${formatAmount(app.salary_min)}–${formatAmount(app.salary_max)}`
-      : formatAmount(app.salary_min || app.salary_max);
-
-  return `${amount}${suffix}`;
+  return `${amount}${rate}${currency}`;
 }
 
 /**
@@ -85,8 +100,12 @@ export default function ApplicationList({
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}
           </th>
-          <th className="col-wide" onClick={() => headerClick("location")}>
-            Location{arrow("location")}
+          {/* Location was dropped here (KAN-51) to make room: the search is
+              effectively all-remote, so the column said "Remote" on nearly
+              every row. It is still stored, still searchable, and still on
+              the detail screen. */}
+          <th className="col-wide" onClick={() => headerClick("employment_type")}>
+            Type{arrow("employment_type")}
           </th>
           <th className="col-wide" onClick={() => headerClick("source")}>
             Source{arrow("source")}
@@ -98,7 +117,10 @@ export default function ApplicationList({
             Experience{arrow("years_experience_min")}
           </th>
           <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
-          <th className="col-wide">Salary</th>
+          {/* "Pay" rather than "Salary": the column now holds an annual
+              figure or an hourly rate (KAN-50). The database columns keep
+              their salary_* names — see the story for why. */}
+          <th className="col-wide">Pay</th>
           <th onClick={() => headerClick("next_action_date")}>
             Next action{arrow("next_action_date")}
           </th>
@@ -149,7 +171,9 @@ export default function ApplicationList({
               )}
             </td>
             <td className="col-wide">{app.role_title}</td>
-            <td className="col-wide">{app.location || "—"}</td>
+            <td className="col-wide">
+              {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
+            </td>
             <td className="col-wide">{app.source || "—"}</td>
             <td className="col-wide">
               {formatExperience(app.years_experience_min)}

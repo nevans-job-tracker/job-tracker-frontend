@@ -2,8 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ApplicationForm from "./ApplicationForm.jsx";
-import { STATUS_LABELS } from "./StatusBadge.jsx";
-import { COMPANY_SIZE_LABELS } from "./companySize.js";
+import { STATUS_LABELS, COMPANY_SIZE_LABELS } from "../labels.js";
 
 // Only the browser handover is stubbed. The conversion and sanitising stay
 // real, so these exercise what the field actually renders.
@@ -498,5 +497,99 @@ describe("the job posting link on the detail screen (KAN-45)", () => {
     // read as part of the field's name.
     setup({ initial: { ...RECORD, job_link: "https://example.com/jobs/7" } });
     expect(screen.getByLabelText("Job link")).toHaveAccessibleName("Job link");
+  });
+});
+
+describe("employment type and commitment (KAN-51)", () => {
+  const RECORD2 = { id: 2, company: "Acme", role_title: "SDET" };
+
+  it("offers every declared type plus a blank", async () => {
+    setup();
+    const select = screen.getByLabelText(/employment type/i);
+    const values = [...select.options].map((o) => o.value);
+    expect(values).toEqual([
+      "",
+      "full_time",
+      "part_time",
+      "contract",
+      "contract_to_hire",
+      "volunteer",
+    ]);
+  });
+
+  it("labels the blank as not recorded rather than leaving it empty", () => {
+    setup();
+    const select = screen.getByLabelText(/employment type/i);
+    expect(select.options[0].textContent).toBe("Not recorded");
+  });
+
+  it("hides the contract term until a contract type is chosen", async () => {
+    setup();
+    expect(screen.queryByLabelText(/contract term/i)).not.toBeInTheDocument();
+    await userEvent.selectOptions(
+      screen.getByLabelText(/employment type/i), "contract");
+    expect(screen.getByLabelText(/contract term/i)).toBeInTheDocument();
+  });
+
+  it("offers the term for contract-to-hire too", async () => {
+    setup();
+    await userEvent.selectOptions(
+      screen.getByLabelText(/employment type/i), "contract_to_hire");
+    expect(screen.getByLabelText(/contract term/i)).toBeInTheDocument();
+  });
+
+  it("clears a stored term when the type stops being a contract", async () => {
+    // Not merely hidden. The API rejects a term on a non-contract role against
+    // the merged record, so a stale value here would make the next save fail
+    // citing a field the form is no longer showing.
+    const { onSubmit } = setup({
+      initial: { ...RECORD2, employment_type: "contract", contract_term_months: 6 },
+    });
+    await userEvent.selectOptions(
+      screen.getByLabelText(/employment type/i), "full_time");
+    await submit();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employment_type: "full_time",
+        contract_term_months: null,
+      })
+    );
+  });
+
+  it("sends the weekly hours range as two numbers", async () => {
+    const { onSubmit } = setup({ initial: RECORD2 });
+    await userEvent.type(screen.getByLabelText(/hours per week \(min\)/i), "10");
+    await userEvent.type(screen.getByLabelText(/hours per week \(max\)/i), "40");
+    await submit();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ hours_per_week_min: 10, hours_per_week_max: 40 })
+    );
+  });
+
+  it("offers weekly hours regardless of employment type", async () => {
+    // Unlike the contract term, hours are not gated — 20 a week means the
+    // same on a part-time role as on a contract.
+    setup();
+    expect(screen.getByLabelText(/hours per week \(min\)/i)).toBeInTheDocument();
+    await userEvent.selectOptions(
+      screen.getByLabelText(/employment type/i), "part_time");
+    expect(screen.getByLabelText(/hours per week \(min\)/i)).toBeInTheDocument();
+  });
+
+  it("defaults the pay period to annual", async () => {
+    const { onSubmit } = setup({ initial: RECORD2 });
+    await submit();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ pay_period: "annual" })
+    );
+  });
+
+  it("sends hourly once chosen", async () => {
+    const { onSubmit } = setup({ initial: RECORD2 });
+    await userEvent.selectOptions(screen.getByLabelText(/pay period/i), "hourly");
+    await submit();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ pay_period: "hourly" })
+    );
   });
 });

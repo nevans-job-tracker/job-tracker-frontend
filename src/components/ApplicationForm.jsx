@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
-import { COMPANY_SIZE_OPTIONS, COMPANY_SIZE_LABELS } from "./companySize.js";
+import {
+  STATUS_OPTIONS,
+  STATUS_LABELS,
+  COMPANY_SIZE_OPTIONS,
+  COMPANY_SIZE_LABELS,
+  PAY_PERIOD_OPTIONS,
+  PAY_PERIOD_LABELS,
+  EMPLOYMENT_TYPE_OPTIONS,
+  EMPLOYMENT_TYPE_LABELS,
+  CONTRACT_TYPES,
+} from "../labels.js";
 import { isOpenableLink } from "../jobLink.js";
 import CoverLetterField from "./CoverLetterField.jsx";
 
@@ -15,6 +24,11 @@ const emptyForm = {
   status: "applied",
   salary_min: "",
   salary_max: "",
+  pay_period: "annual",
+  employment_type: "",
+  contract_term_months: "",
+  hours_per_week_min: "",
+  hours_per_week_max: "",
   date_applied: new Date().toISOString().slice(0, 10),
   next_action: "",
   next_action_date: "",
@@ -53,7 +67,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 // differ as strings while meaning the same thing: "120000" comes back
 // "120000.00". Comparing those literally would leave the form permanently
 // dirty after every save.
-const NUMERIC_FIELDS = ["salary_min", "salary_max", "years_experience_min"];
+const NUMERIC_FIELDS = [
+  "salary_min",
+  "salary_max",
+  "years_experience_min",
+  "contract_term_months",
+  "hours_per_week_min",
+  "hours_per_week_max",
+];
 
 const sameValue = (key, a, b) =>
   NUMERIC_FIELDS.includes(key)
@@ -89,6 +110,11 @@ export default function ApplicationForm({
   // to be submitted, so this warns rather than blocking. See REQUIREMENTS.md §2.
   const dateIsInFuture = Boolean(form.date_applied) && form.date_applied > today();
 
+  // The term field only appears for a contract. This mirrors the API rule
+  // rather than replacing it — §6.1: a rule enforced only in the UI is
+  // decorative while the API is directly reachable.
+  const isContract = CONTRACT_TYPES.includes(form.employment_type);
+
   // Reported up so the page can warn before a navigation throws the edits
   // away. Saving replaces `initial`, which resets this without a remount.
   const pristine = useMemo(() => toForm(initial), [initial]);
@@ -121,6 +147,19 @@ export default function ApplicationForm({
           form.years_experience_min === "" ? null : Number(form.years_experience_min),
         salary_min: form.salary_min === "" ? null : Number(form.salary_min),
         salary_max: form.salary_max === "" ? null : Number(form.salary_max),
+        employment_type: blankToNull(form.employment_type),
+        // Cleared alongside the type, not merely hidden. The API rejects a
+        // term on a non-contract role against the *merged* record, so leaving
+        // a stale value here would make the next save fail with a message
+        // about a field the form is no longer showing.
+        contract_term_months:
+          isContract && form.contract_term_months !== ""
+            ? Number(form.contract_term_months)
+            : null,
+        hours_per_week_min:
+          form.hours_per_week_min === "" ? null : Number(form.hours_per_week_min),
+        hours_per_week_max:
+          form.hours_per_week_max === "" ? null : Number(form.hours_per_week_max),
         job_link: blankToNull(form.job_link),
         source: blankToNull(form.source),
         location: blankToNull(form.location),
@@ -265,6 +304,71 @@ export default function ApplicationForm({
             type="number"
             value={form.salary_max}
             onChange={(e) => update("salary_max", e.target.value)}
+          />
+        </label>
+        <label>
+          Pay period
+          <select
+            value={form.pay_period}
+            onChange={(e) => update("pay_period", e.target.value)}
+          >
+            {PAY_PERIOD_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {PAY_PERIOD_LABELS[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="form-row">
+        <label>
+          Employment type
+          <select
+            value={form.employment_type}
+            onChange={(e) => update("employment_type", e.target.value)}
+          >
+            <option value="">Not recorded</option>
+            {EMPLOYMENT_TYPE_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {EMPLOYMENT_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isContract && (
+          <label>
+            Contract term (months)
+            <input
+              type="number"
+              min="0"
+              value={form.contract_term_months}
+              onChange={(e) => update("contract_term_months", e.target.value)}
+            />
+          </label>
+        )}
+      </div>
+
+      {/* A pair, because postings state it as a range — "Commitment: 10-40
+          hrs/week". Not gated on employment type: 20 hours a week means the
+          same on a part-time role as on a contract. */}
+      <div className="form-row">
+        <label>
+          Hours per week (min)
+          <input
+            type="number"
+            min="0"
+            value={form.hours_per_week_min}
+            onChange={(e) => update("hours_per_week_min", e.target.value)}
+          />
+        </label>
+        <label>
+          Hours per week (max)
+          <input
+            type="number"
+            min="0"
+            value={form.hours_per_week_max}
+            onChange={(e) => update("hours_per_week_max", e.target.value)}
           />
         </label>
       </div>

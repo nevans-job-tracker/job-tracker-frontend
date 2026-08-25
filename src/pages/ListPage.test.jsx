@@ -5,7 +5,7 @@ import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
 import { listApplications } from "../api/client.js";
 import { downloadCsv } from "../csv.js";
-import { STATUS_LABELS } from "../components/StatusBadge.jsx";
+import { STATUS_LABELS } from "../labels.js";
 
 vi.mock("../api/client.js", () => ({ listApplications: vi.fn() }));
 

@@ -1,4 +1,4 @@
-import { STATUS_OPTIONS, STATUS_LABELS } from "./StatusBadge.jsx";
+import { STATUS_OPTIONS, STATUS_LABELS } from "../labels.js";
 
 // Archive state is independent of status: both filters apply at once.
 const SHOW_OPTIONS = [

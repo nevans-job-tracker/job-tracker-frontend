@@ -1,7 +1,11 @@
 import { downloadFile } from "./download.js";
 import { htmlToText } from "./coverLetter.js";
-import { STATUS_LABELS } from "./components/StatusBadge.jsx";
-import { COMPANY_SIZE_LABELS } from "./components/companySize.js";
+import {
+  STATUS_LABELS,
+  COMPANY_SIZE_LABELS,
+  EMPLOYMENT_TYPE_LABELS,
+  PAY_PERIOD_LABELS,
+} from "./labels.js";
 
 /**
  * Building the CSV here rather than on the server keeps STATUS_LABELS and
@@ -30,9 +34,17 @@ const APPLICATION_COLUMNS = [
   ["Location", (a) => a.location],
   ["Company size", (a) => COMPANY_SIZE_LABELS[a.company_size]],
   ["Years experience (min)", (a) => a.years_experience_min],
+  ["Employment type", (a) => EMPLOYMENT_TYPE_LABELS[a.employment_type]],
+  ["Contract term (months)", (a) => a.contract_term_months],
+  ["Hours per week (min)", (a) => a.hours_per_week_min],
+  ["Hours per week (max)", (a) => a.hours_per_week_max],
   ["Status", (a) => STATUS_LABELS[a.status]],
   ["Salary min", (a) => number(a.salary_min)],
   ["Salary max", (a) => number(a.salary_max)],
+  // Numeric above, readable here. Without this column the two figures are
+  // ambiguous in the spreadsheet in exactly the way KAN-50 fixed in the app —
+  // an 86 and a 120000 in the same column mean different things.
+  ["Pay period", (a) => PAY_PERIOD_LABELS[a.pay_period]],
   ["Currency", (a) => a.salary_currency],
   ["Date applied", (a) => a.date_applied],
   ["Next action", (a) => a.next_action],

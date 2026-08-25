@@ -117,7 +117,7 @@ describe("ApplicationList", () => {
     it.each([
       ["Company", "company"],
       ["Role", "role_title"],
-      ["Location", "location"],
+      ["Type", "employment_type"],
       ["Source", "source"],
       ["Status", "status"],
       ["Next action", "next_action_date"],
@@ -137,7 +137,7 @@ describe("ApplicationList", () => {
     // Which columns survive on a phone. The CSS hides .col-wide below 900px;
     // this asserts the right cells carry the class.
     const alwaysVisible = ["Company", "Status", "Next action", "Applied"];
-    const wideOnly = ["Role", "Location", "Source", "Salary"];
+    const wideOnly = ["Role", "Type", "Source", "Experience", "Link", "Pay"];
 
     // Queried as column headers rather than by text: "Applied" is also a status
     // badge value, so a plain text query matches a body cell too.
@@ -178,8 +178,8 @@ describe("ApplicationList", () => {
 
       it("rounds a half up rather than truncating", () => {
         // 106500 -> 107K. Truncation would read 106K, understating the offer.
-        salary({ salary_min: "106500.00", salary_max: "106500.00" });
-        expect(screen.getByText("107K–107K")).toBeInTheDocument();
+        salary({ salary_min: "106500.00", salary_max: "106400.00" });
+        expect(screen.getByText("107K–106K")).toBeInTheDocument();
       });
 
       it("formats a lone bound the same way", () => {
@@ -363,5 +363,67 @@ describe("required experience (KAN-47)", () => {
     const { onSortChange } = setup({ sortBy: "years_experience_min", sortDir: "asc" });
     await userEvent.click(screen.getByText(/^Experience/));
     expect(onSortChange).toHaveBeenCalledWith("years_experience_min", "desc");
+  });
+});
+
+describe("pay display (KAN-50)", () => {
+  const pay = (fields) =>
+    setup({ applications: [{ ...APPLICATIONS[0], ...fields }] });
+
+  it("labels an hourly rate and does not scale it to thousands", () => {
+    // Before pay_period, 86 rendered as a bare "86–86" that said nothing
+    // about being a rate, and only the sub-1000 guard stopped it reading 0K.
+    pay({ pay_period: "hourly", salary_min: "86.00", salary_max: "86.00" });
+    expect(screen.getByText("86/hr")).toBeInTheDocument();
+  });
+
+  it("keeps an hourly range as a range", () => {
+    pay({ pay_period: "hourly", salary_min: "85.00", salary_max: "95.00" });
+    expect(screen.getByText("85–95/hr")).toBeInTheDocument();
+  });
+
+  it("shows a single annual figure once, not twice", () => {
+    // A real row: 120000–120000 read as "120K–120K".
+    pay({ pay_period: "annual", salary_min: "120000.00", salary_max: "120000.00" });
+    expect(screen.getByText("120K")).toBeInTheDocument();
+  });
+
+  it("leaves an annual range alone", () => {
+    pay({ pay_period: "annual", salary_min: "106400.00", salary_max: "177300.00" });
+    expect(screen.getByText("106K–177K")).toBeInTheDocument();
+  });
+
+  it("still labels a non-USD currency", () => {
+    pay({ pay_period: "hourly", salary_min: "70.00", salary_max: "70.00",
+          salary_currency: "GBP" });
+    expect(screen.getByText("70/hr GBP")).toBeInTheDocument();
+  });
+
+  it("calls the column Pay, since it holds two kinds of thing", () => {
+    setup();
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toContain("Pay");
+    expect(headers).not.toContain("Salary");
+  });
+});
+
+describe("employment type in the list (KAN-51)", () => {
+  it("shows the readable label", () => {
+    setup({ applications: [{ ...APPLICATIONS[0], employment_type: "contract_to_hire" }] });
+    expect(screen.getByText("Contract-to-Hire")).toBeInTheDocument();
+  });
+
+  it("shows a dash when it was not recorded", () => {
+    setup({ applications: [{ ...APPLICATIONS[0], employment_type: null }] });
+    const row = screen.getByText("Northwind").closest("tr");
+    expect(row.cells[3]).toHaveTextContent("—");
+  });
+
+  it("no longer offers a Location column", () => {
+    // Dropped to make room (KAN-51) — the search is effectively all-remote,
+    // so it said "Remote" on nearly every row. Still stored and searchable.
+    setup();
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).not.toContain("Location");
   });
 });
