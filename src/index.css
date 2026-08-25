@@ -282,14 +282,47 @@ button.danger:hover {
   margin-bottom: 12px;
 }
 
-.search-input {
+/* Wraps the input so the clear button can sit over its right edge. Carries
+   the flex sizing the input used to, so the filter row lays out unchanged. */
+.search-field {
   /* Basis rather than flex:1 — the search box drops to its own line when the
      row is too narrow instead of squeezing the selects off-screen. */
   flex: 1 1 200px;
   min-width: 0;
+  position: relative;
+  display: flex;
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 8px 10px;
+  /* Room for the clear button, which overlays this edge. */
+  padding-right: 32px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  /* Resets the global button styling — this is a glyph over a field, not a
+     filled control. */
+  background: none;
+  color: var(--text-muted);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 1.1rem;
+  border-radius: 50%;
+}
+
+.search-clear:hover {
+  background: var(--field);
+  color: var(--text);
 }
 
 select,

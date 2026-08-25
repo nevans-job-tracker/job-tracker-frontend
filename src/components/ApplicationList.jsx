@@ -37,6 +37,21 @@ function formatSalary(app) {
   return `${amount}${suffix}`;
 }
 
+/**
+ * Required experience, which is stored as a *minimum* (§2).
+ *
+ * "3-5 years" and "5+" both store as their lower bound, so "at least n" is
+ * true of either and a bare number would read as an exact requirement. Zero
+ * is a real answer distinct from blank — an entry-level posting states no
+ * minimum — and "0+" says nothing, so it gets a word.
+ */
+function formatExperience(years) {
+  if (years === null || years === undefined || years === "") return "—";
+  const n = Number(years);
+  if (!Number.isFinite(n)) return "—";
+  return n === 0 ? "Entry" : `${n}+`;
+}
+
 export default function ApplicationList({
   applications,
   onOpen,
@@ -75,6 +90,12 @@ export default function ApplicationList({
           </th>
           <th className="col-wide" onClick={() => headerClick("source")}>
             Source{arrow("source")}
+          </th>
+          <th
+            className="col-wide"
+            onClick={() => headerClick("years_experience_min")}
+          >
+            Experience{arrow("years_experience_min")}
           </th>
           <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
           <th className="col-wide">Salary</th>
@@ -130,6 +151,9 @@ export default function ApplicationList({
             <td className="col-wide">{app.role_title}</td>
             <td className="col-wide">{app.location || "—"}</td>
             <td className="col-wide">{app.source || "—"}</td>
+            <td className="col-wide">
+              {formatExperience(app.years_experience_min)}
+            </td>
             <td>
               <StatusBadge status={app.status} />
             </td>

@@ -8,6 +8,7 @@ const APPLICATIONS = [
     id: 1,
     company: "Northwind",
     role_title: "QA Engineer",
+    years_experience_min: 5,
     job_link: "https://northwind.example/jobs/1",
     location: "Austin, TX",
     source: "LinkedIn",
@@ -23,6 +24,7 @@ const APPLICATIONS = [
     id: 2,
     company: "Globex",
     role_title: "Senior QA Engineer",
+    years_experience_min: null,
     job_link: null,
     location: null,
     source: null,
@@ -324,5 +326,42 @@ describe("salary on one line (KAN-46)", () => {
   it("keeps the date cell unbreakable for the same reason", () => {
     setup();
     expect(screen.getByText("2026-03-01")).toHaveClass("col-date");
+  });
+});
+
+describe("required experience (KAN-47)", () => {
+  it("shows the stored minimum with a plus", () => {
+    // The column stores a minimum, so "at least 5" is true whether the posting
+    // said "5+" or "5-8 years". A bare 5 would read as exact.
+    setup();
+    expect(screen.getByText("5+")).toBeInTheDocument();
+  });
+
+  it("shows a dash when nothing was recorded", () => {
+    setup({ applications: [APPLICATIONS[1]] });
+    const row = screen.getByText("Globex").closest("tr");
+    expect(row.cells[5]).toHaveTextContent("—");
+  });
+
+  it("calls zero Entry rather than 0+", () => {
+    // §2: 0 is a real answer distinct from blank — an entry-level posting
+    // states no minimum. "0+" would be true and say nothing.
+    setup({ applications: [{ ...APPLICATIONS[0], years_experience_min: 0 }] });
+    expect(screen.getByText("Entry")).toBeInTheDocument();
+    expect(screen.queryByText("0+")).not.toBeInTheDocument();
+  });
+
+  it("sorts by the column the API actually accepts", async () => {
+    // years_experience_min is already in the route's sort_by whitelist; a
+    // typo here would 422 rather than fail visibly.
+    const { onSortChange } = setup();
+    await userEvent.click(screen.getByText(/^Experience/));
+    expect(onSortChange).toHaveBeenCalledWith("years_experience_min", "asc");
+  });
+
+  it("toggles direction when already sorted by it", async () => {
+    const { onSortChange } = setup({ sortBy: "years_experience_min", sortDir: "asc" });
+    await userEvent.click(screen.getByText(/^Experience/));
+    expect(onSortChange).toHaveBeenCalledWith("years_experience_min", "desc");
   });
 });

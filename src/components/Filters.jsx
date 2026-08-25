@@ -17,12 +17,27 @@ export default function Filters({
 }) {
   return (
     <div className="filters">
-      <input
-        className="search-input"
-        placeholder="Search company, role, location, source, notes..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
+      {/* The button is a sibling of the input inside a positioned wrapper,
+          not inside it — an input cannot contain elements. It renders only
+          when there is something to clear, so it never sits there inert. */}
+      <div className="search-field">
+        <input
+          className="search-input"
+          placeholder="Search company, role, location, source, notes..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        {search && (
+          <button
+            type="button"
+            className="search-clear"
+            aria-label="Clear search"
+            onClick={() => onSearchChange("")}
+          >
+            &times;
+          </button>
+        )}
+      </div>
       <select
         aria-label="Filter by status"
         value={status}
