@@ -133,7 +133,7 @@ export default function ApplicationList({
             <td>
               <StatusBadge status={app.status} />
             </td>
-            <td className="col-wide">{formatSalary(app)}</td>
+            <td className="col-wide col-salary">{formatSalary(app)}</td>
             <td>
               {app.next_action ? (
                 <>

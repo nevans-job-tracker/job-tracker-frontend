@@ -309,3 +309,20 @@ describe("the job posting link (KAN-45)", () => {
     expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
   });
 });
+
+describe("salary on one line (KAN-46)", () => {
+  it("marks the salary cell as unbreakable", () => {
+    // jsdom does not lay out, so it cannot see the wrap itself — that was
+    // measured in a real viewport. What is checkable here is the class the
+    // nowrap rule hangs off, which is the part a refactor would drop
+    // silently.
+    setup();
+    const cell = screen.getByText("90K–120K");
+    expect(cell).toHaveClass("col-salary");
+  });
+
+  it("keeps the date cell unbreakable for the same reason", () => {
+    setup();
+    expect(screen.getByText("2026-03-01")).toHaveClass("col-date");
+  });
+});

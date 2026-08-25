@@ -337,7 +337,13 @@ textarea {
 /* Dates are fixed-width values and unreadable when broken mid-token — the
    Applied column was rendering as "2026-08-" / "20" on a phone (KAN-29).
    Applied to the date cells only: Next action is free text and SHOULD wrap. */
-.app-table .col-date {
+/* Both hold a value with an interior break opportunity — a hyphen in a date,
+   an en-dash in a salary range — which the auto table layout treats as licence
+   to size the column to the widest unbreakable run rather than the whole
+   string. The result wraps with width to spare, so this is what sets the
+   column's real minimum. KAN-25 for the date, KAN-46 for the salary. */
+.app-table .col-date,
+.app-table .col-salary {
   white-space: nowrap;
 }
 
