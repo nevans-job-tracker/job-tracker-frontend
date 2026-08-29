@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { listApplications } from "../api/client.js";
+import { listApplications, listSources } from "../api/client.js";
 import { toCsv, csvFilename, downloadCsv } from "../csv.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
@@ -11,6 +11,7 @@ const PAGE_SIZE = 50;
 const DEFAULTS = {
   search: "",
   status: "",
+  source: "",
   show: "active",
   sort_by: "date_applied",
   sort_dir: "desc",
@@ -24,6 +25,7 @@ export default function ListPage() {
   // survives a reload and can be linked to. See REQUIREMENTS.md §4.2.
   const search = searchParams.get("search") ?? DEFAULTS.search;
   const status = searchParams.get("status") ?? DEFAULTS.status;
+  const source = searchParams.get("source") ?? DEFAULTS.source;
   const show = searchParams.get("show") ?? DEFAULTS.show;
   const sortBy = searchParams.get("sort_by") ?? DEFAULTS.sort_by;
   const sortDir = searchParams.get("sort_dir") ?? DEFAULTS.sort_dir;
@@ -38,6 +40,7 @@ export default function ListPage() {
       const next = {
         search,
         status,
+        source,
         show,
         sort_by: sortBy,
         sort_dir: sortDir,
@@ -49,7 +52,7 @@ export default function ListPage() {
       }
       setSearchParams(params, { replace });
     },
-    [search, status, show, sortBy, sortDir, setSearchParams]
+    [search, status, source, show, sortBy, sortDir, setSearchParams]
   );
 
   const [applications, setApplications] = useState([]);
@@ -58,6 +61,24 @@ export default function ListPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [sources, setSources] = useState([]);
+
+  // Fetched once, not per filter change: the option set has to stay stable
+  // while the list underneath it narrows, or choosing a source would leave
+  // only that source to choose from. See KAN-56.
+  useEffect(() => {
+    let cancelled = false;
+    listSources()
+      .then((data) => {
+        if (!cancelled) setSources(data.sources);
+      })
+      // A failure here costs the filter its options, not the page. The list
+      // itself surfaces its own errors.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /**
    * Exports every row the current filters match, not the page on screen.
@@ -75,6 +96,7 @@ export default function ListPage() {
       const data = await listApplications({
         search,
         status,
+        source,
         show,
         sort_by: sortBy,
         sort_dir: sortDir,
@@ -95,6 +117,7 @@ export default function ListPage() {
       const data = await listApplications({
         search,
         status,
+        source,
         show,
         sort_by: sortBy,
         sort_dir: sortDir,
@@ -104,7 +127,7 @@ export default function ListPage() {
       setApplications((prev) => (append ? [...prev, ...data.items] : data.items));
       setTotal(data.total);
     },
-    [search, status, show, sortBy, sortDir]
+    [search, status, source, show, sortBy, sortDir]
   );
 
   // Search/filter/sort changes reset back to the first page.
@@ -167,6 +190,9 @@ export default function ListPage() {
       <Filters
         search={search}
         onSearchChange={(value) => setParams({ search: value }, { replace: true })}
+        sources={sources}
+        source={source}
+        onSourceChange={(value) => setParams({ source: value })}
         status={status}
         onStatusChange={(value) => setParams({ status: value })}
         show={show}

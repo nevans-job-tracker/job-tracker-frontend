@@ -47,6 +47,18 @@ export async function listApplications(params = {}) {
   return handleResponse(res);
 }
 
+/**
+ * The distinct sources, for the list's Source filter (KAN-56).
+ *
+ * A separate call rather than a field on the list response: that response is
+ * filtered and paginated, so choosing a source would collapse the options to
+ * that one value and leave no way back.
+ */
+export async function listSources() {
+  const res = await fetch(`${API_URL}/applications/sources`);
+  return handleResponse(res);
+}
+
 export async function getStatusHistory(id) {
   const res = await fetch(`${API_URL}/applications/${id}/history`);
   return handleResponse(res);

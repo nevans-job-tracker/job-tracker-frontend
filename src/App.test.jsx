@@ -6,6 +6,7 @@ import { listApplications, getApplication } from "./api/client.js";
 
 vi.mock("./api/client.js", () => ({
   listApplications: vi.fn().mockResolvedValue({ total: 0, items: [] }),
+  listSources: vi.fn().mockResolvedValue({ sources: [] }),
   getApplication: vi.fn().mockResolvedValue({
     id: 7,
     company: "Northwind",

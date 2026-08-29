@@ -3,11 +3,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
-import { listApplications } from "../api/client.js";
+import { listApplications, listSources } from "../api/client.js";
 import { downloadCsv } from "../csv.js";
 import { STATUS_LABELS } from "../labels.js";
 
-vi.mock("../api/client.js", () => ({ listApplications: vi.fn() }));
+vi.mock("../api/client.js", () => ({
+  listApplications: vi.fn(),
+  listSources: vi.fn().mockResolvedValue({ sources: [] }),
+}));
 
 // toCsv stays real, so these exercise the actual file the browser would get.
 // Only the handover to the browser is stubbed — jsdom has no Blob download.
@@ -85,6 +88,92 @@ describe("ListPage", () => {
       search: "",
       status: "",
       show: "active",
+    });
+  });
+
+  describe("source filter (KAN-56)", () => {
+    const sourceSelect = () => screen.getByLabelText(/filter by source/i);
+
+    it("offers the options the API reports", async () => {
+      listSources.mockResolvedValueOnce({ sources: ["Dice", "LinkedIn"] });
+      setup();
+      await screen.findByText("Company 01");
+      await waitFor(() =>
+        expect([...sourceSelect().options].map((o) => o.value)).toEqual([
+          "",
+          "Dice",
+          "LinkedIn",
+        ])
+      );
+    });
+
+    it("sends no source by default", async () => {
+      // The client drops empty values when it builds the query string, so an
+      // empty source never reaches the API. This asserts the argument rather
+      // than the URL because listApplications is mocked here.
+      setup();
+      await screen.findByText("Company 01");
+      expect(lastQuery().source).toBe("");
+    });
+
+    it("asks the API for the chosen source", async () => {
+      listSources.mockResolvedValueOnce({ sources: ["Dice", "LinkedIn"] });
+      setup();
+      await screen.findByText("Company 01");
+      await waitFor(() => expect(sourceSelect().options).toHaveLength(3));
+      await userEvent.selectOptions(sourceSelect(), "Dice");
+      await waitFor(() => expect(lastQuery()).toMatchObject({ source: "Dice" }));
+    });
+
+    it("puts the choice in the URL", async () => {
+      listSources.mockResolvedValueOnce({ sources: ["Dice"] });
+      const seen = setup();
+      await screen.findByText("Company 01");
+      await waitFor(() => expect(sourceSelect().options).toHaveLength(2));
+      await userEvent.selectOptions(sourceSelect(), "Dice");
+      await waitFor(() => expect(seen.url).toBe("/?source=Dice"));
+    });
+
+    it("reads the choice back out of the URL", async () => {
+      listSources.mockResolvedValueOnce({ sources: ["Dice"] });
+      setup({ initialEntry: "/?source=Dice" });
+      await screen.findByText("Company 01");
+      await waitFor(() => expect(sourceSelect()).toHaveValue("Dice"));
+      expect(lastQuery()).toMatchObject({ source: "Dice" });
+    });
+
+    it("keeps its options when the list narrows to one source", async () => {
+      // Fetched once on mount rather than per filter change. Recomputing them
+      // from the visible rows would leave only the chosen source selectable,
+      // with no way back to All.
+      listSources.mockResolvedValueOnce({ sources: ["Dice", "LinkedIn"] });
+      setup();
+      await screen.findByText("Company 01");
+      await waitFor(() => expect(sourceSelect().options).toHaveLength(3));
+      await userEvent.selectOptions(sourceSelect(), "Dice");
+      await waitFor(() => expect(lastQuery()).toMatchObject({ source: "Dice" }));
+      expect(sourceSelect().options).toHaveLength(3);
+    });
+
+    it("carries the source into the CSV export", async () => {
+      listSources.mockResolvedValueOnce({ sources: ["Dice"] });
+      setup();
+      await screen.findByText("Company 01");
+      await waitFor(() => expect(sourceSelect().options).toHaveLength(2));
+      await userEvent.selectOptions(sourceSelect(), "Dice");
+      await waitFor(() => expect(lastQuery()).toMatchObject({ source: "Dice" }));
+      await userEvent.click(screen.getByRole("button", { name: /export csv/i }));
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({ source: "Dice", include_contacts: true })
+      );
+    });
+
+    it("still renders the page when the options cannot be fetched", async () => {
+      // Losing the options costs the filter its choices, not the list.
+      listSources.mockRejectedValueOnce(new Error("offline"));
+      setup();
+      expect(await screen.findByText("Company 01")).toBeInTheDocument();
+      expect(sourceSelect().options).toHaveLength(1);
     });
   });
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listApplications,
+  listSources,
   getApplication,
   getStatusHistory,
   createApplication,
@@ -29,6 +30,25 @@ beforeEach(() => {
 
 const calledUrl = () => global.fetch.mock.calls[0][0];
 const calledOptions = () => global.fetch.mock.calls[0][1];
+
+describe("listSources", () => {
+  it("requests the sources collection", async () => {
+    await listSources();
+    expect(calledUrl()).toBe(`${BASE}/applications/sources`);
+  });
+
+  it("returns the body", async () => {
+    global.fetch.mockResolvedValue(
+      mockResponse({ body: { sources: ["Dice", "LinkedIn"] } })
+    );
+    expect(await listSources()).toEqual({ sources: ["Dice", "LinkedIn"] });
+  });
+
+  it("surfaces a failure rather than returning nothing", async () => {
+    global.fetch.mockResolvedValue(mockResponse({ ok: false, status: 500 }));
+    await expect(listSources()).rejects.toThrow();
+  });
+});
 
 describe("listApplications", () => {
   it("requests the collection with no query when given nothing", async () => {

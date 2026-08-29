@@ -556,6 +556,24 @@ describe("employment type and commitment (KAN-51)", () => {
     );
   });
 
+  it("sends a term typed into the conditional field", async () => {
+    // The wiring tests walk every field the form renders up front, and this
+    // one only exists once a contract type is chosen — so its handler was the
+    // one inline arrow nothing exercised. That is exactly the mistyped-key
+    // bug the 100%-function rule exists to catch.
+    const { onSubmit } = setup({ initial: RECORD2 });
+    await userEvent.selectOptions(
+      screen.getByLabelText(/employment type/i), "contract");
+    await userEvent.type(screen.getByLabelText(/contract term/i), "6");
+    await submit();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employment_type: "contract",
+        contract_term_months: 6,
+      })
+    );
+  });
+
   it("sends the weekly hours range as two numbers", async () => {
     const { onSubmit } = setup({ initial: RECORD2 });
     await userEvent.type(screen.getByLabelText(/hours per week \(min\)/i), "10");

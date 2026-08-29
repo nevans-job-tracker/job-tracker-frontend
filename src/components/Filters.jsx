@@ -10,6 +10,9 @@ const SHOW_OPTIONS = [
 export default function Filters({
   search,
   onSearchChange,
+  sources = [],
+  source,
+  onSourceChange,
   status,
   onStatusChange,
   show,
@@ -23,7 +26,7 @@ export default function Filters({
       <div className="search-field">
         <input
           className="search-input"
-          placeholder="Search company, role, location, source, notes..."
+          placeholder="Search company, role, location, notes..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -38,6 +41,21 @@ export default function Filters({
           </button>
         )}
       </div>
+      {/* Options come from the data rather than a fixed list, so a source the
+          extension does not produce — a manual "Referral", or a typo — is
+          still offered and still filterable. See KAN-56. */}
+      <select
+        aria-label="Filter by source"
+        value={source}
+        onChange={(e) => onSourceChange(e.target.value)}
+      >
+        <option value="">All Sources</option>
+        {sources.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>
       <select
         aria-label="Filter by status"
         value={status}
