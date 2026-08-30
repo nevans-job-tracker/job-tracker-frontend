@@ -444,10 +444,6 @@ textarea {
   }
 }
 
-.app-table .col-status {
-  white-space: nowrap;
-}
-
 /* Carries its status colour rather than dropping to a default grey control.
    §4.4 chose those nine pairs deliberately, and losing them would cost the
    list the at-a-glance scan it depends on. The badge-* class supplies the
