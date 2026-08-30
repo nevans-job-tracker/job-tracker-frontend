@@ -460,3 +460,96 @@ describe("ApplicationPage — back link", () => {
     expect(await screen.findByText("All applications list")).toBeInTheDocument();
   });
 });
+
+describe("Save and close (KAN-58)", () => {
+  const closeButton = () => screen.getByRole("button", { name: /and close/i });
+
+  it("saves, then returns to the list", async () => {
+    updateApplication.mockResolvedValue({ ...EXISTING, status: "offer" });
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+
+    await userEvent.selectOptions(screen.getByLabelText(/^status/i), "offer");
+    await userEvent.click(closeButton());
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({ status: "offer" })
+      )
+    );
+    expect(await screen.findByText("All applications list")).toBeInTheDocument();
+  });
+
+  it("stays put and shows the error when the save fails", async () => {
+    // Navigating away would hide a failure and lose the edits with it.
+    updateApplication.mockRejectedValue(new Error("Salary min cannot be greater"));
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+
+    await userEvent.click(closeButton());
+
+    expect(await screen.findByText(/salary min cannot be greater/i)).toBeInTheDocument();
+    expect(screen.queryByText("All applications list")).not.toBeInTheDocument();
+  });
+
+  it("does not prompt about unsaved changes", async () => {
+    // The guard exists for navigations that *discard* typing (§4.4). This one
+    // saves first, so asking whether to throw the work away would be absurd.
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("confirm", confirm);
+    updateApplication.mockResolvedValue({ ...EXISTING, notes: "Called back" });
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+
+    await userEvent.type(screen.getByLabelText(/^notes/i), "Called back");
+    await userEvent.click(closeButton());
+
+    expect(await screen.findByText("All applications list")).toBeInTheDocument();
+    expect(confirm).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not flash Saved on the way out", async () => {
+    // Only worth showing when the user stays to see it.
+    updateApplication.mockResolvedValue(EXISTING);
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+
+    await userEvent.click(closeButton());
+    await screen.findByText("All applications list");
+    expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+  });
+
+  describe("on the new-entry screen", () => {
+    it("is labelled for creating", async () => {
+      setup("/applications/new");
+      expect(
+        await screen.findByRole("button", { name: "Create and close" })
+      ).toBeInTheDocument();
+    });
+
+    it("creates, then goes to the list rather than the new record", async () => {
+      // Different intent from KAN-33's save-add-save-add flow, which is why
+      // both controls exist rather than one replacing the other.
+      createApplication.mockResolvedValue({ ...EXISTING, id: 42 });
+      setup("/applications/new");
+      await fillRequired();
+
+      await userEvent.click(screen.getByRole("button", { name: /create and close/i }));
+
+      await waitFor(() => expect(createApplication).toHaveBeenCalled());
+      expect(await screen.findByText("All applications list")).toBeInTheDocument();
+    });
+  });
+});
+
+describe("the back link (KAN-58)", () => {
+  it("is still an anchor, so it can be opened in a new tab", async () => {
+    setup("/applications/7");
+    await screen.findByText("Northwind — QA Engineer");
+    const back = screen.getByRole("link", { name: /all applications/i });
+    expect(back).toHaveAttribute("href", "/");
+    expect(back).toHaveClass("back-link");
+  });
+});

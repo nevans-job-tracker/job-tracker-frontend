@@ -18,7 +18,15 @@ function setup(props = {}) {
   return { onSubmit, onCancel };
 }
 
-const submit = () => userEvent.click(screen.getByRole("button", { name: /save|create/i }));
+// Two submit buttons since KAN-58, so the matcher has to exclude the closing
+// one or it finds both.
+const isPlainSubmit = (name) => /save|create/i.test(name) && !/close/i.test(name);
+
+const submit = () =>
+  userEvent.click(screen.getByRole("button", { name: isPlainSubmit }));
+
+const submitAndClose = () =>
+  userEvent.click(screen.getByRole("button", { name: /and close/i }));
 
 describe("ApplicationForm", () => {
   it("submits the values that were typed", async () => {
@@ -609,5 +617,93 @@ describe("employment type and commitment (KAN-51)", () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ pay_period: "hourly" })
     );
+  });
+});
+
+describe("Save and close (KAN-58)", () => {
+  const RECORD3 = { id: 3, company: "Acme", role_title: "QA Engineer" };
+
+  it("reports the closing intent, and the plain save does not", async () => {
+    const { onSubmit } = setup({ initial: RECORD3 });
+    await submitAndClose();
+    expect(onSubmit).toHaveBeenCalledWith(expect.any(Object), { close: true });
+
+    onSubmit.mockClear();
+    await submit();
+    // One argument, not { close: false } — the ordinary path says nothing.
+    expect(onSubmit).toHaveBeenCalledWith(expect.any(Object));
+  });
+
+  it("sends the same payload either way", async () => {
+    const { onSubmit } = setup({ initial: RECORD3 });
+    await userEvent.type(screen.getByLabelText(/^location$/i), "Remote");
+    await submitAndClose();
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      company: "Acme",
+      location: "Remote",
+    });
+  });
+
+  it("does not leak the intent into the next save", async () => {
+    // The flag is read and cleared together. If a close fails and the user
+    // then presses Save changes, a stale flag would navigate away from an
+    // error they have not read.
+    const onSubmit = vi.fn().mockRejectedValueOnce(new Error("nope"));
+    render(<ApplicationForm initial={RECORD3} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    await submitAndClose();
+    expect(await screen.findByText("nope")).toBeInTheDocument();
+
+    onSubmit.mockResolvedValueOnce(undefined);
+    await submit();
+    expect(onSubmit).toHaveBeenLastCalledWith(expect.any(Object));
+  });
+
+  it("surfaces a failure rather than pretending it closed", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("server said no"));
+    render(<ApplicationForm initial={RECORD3} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await submitAndClose();
+    expect(await screen.findByText("server said no")).toBeInTheDocument();
+  });
+
+  it("uses the label it is given", () => {
+    setup({ initial: RECORD3, closeLabel: "Create and close" });
+    expect(
+      screen.getByRole("button", { name: "Create and close" })
+    ).toBeInTheDocument();
+  });
+
+  it("reads as a hierarchy rather than three equal choices", () => {
+    // Colour encodes consequence, not identity: one filled primary, one
+    // outlined secondary, one quiet. Two filled buttons side by side would
+    // say nothing about which is the ordinary path.
+    setup({ initial: RECORD3 });
+    const cancel = screen.getByRole("button", { name: /cancel/i });
+    const save = screen.getByRole("button", { name: isPlainSubmit });
+    const close = screen.getByRole("button", { name: /and close/i });
+
+    expect(cancel).toHaveClass("button-quiet");
+    expect(save).toHaveClass("button-secondary");
+    // The primary carries no modifier — it is the default button style.
+    expect(close.className).toBe("");
+  });
+
+  it("puts the primary last, where the pointer ends up", () => {
+    setup({ initial: RECORD3 });
+    const buttons = [...document.querySelectorAll(".form-actions button")];
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "Cancel",
+      "Save",
+      "Save and close",
+    ]);
+  });
+
+  it("disables both submits while saving", async () => {
+    let release;
+    const onSubmit = vi.fn(() => new Promise((r) => { release = r; }));
+    render(<ApplicationForm initial={RECORD3} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await submitAndClose();
+    expect(screen.getByRole("button", { name: /and close/i })).toBeDisabled();
+    release();
   });
 });

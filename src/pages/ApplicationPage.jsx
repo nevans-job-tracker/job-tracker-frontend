@@ -104,9 +104,22 @@ export default function ApplicationPage() {
     load();
   }, [load]);
 
-  async function handleSubmit(data) {
+  /**
+   * `close` comes from which submit button was pressed (KAN-58).
+   *
+   * The unsaved-changes guard is deliberately not consulted. It exists for
+   * navigations that *discard* typing (§4.4); this one saves first, so
+   * prompting would ask whether to throw away work that is already stored.
+   * Navigating programmatically rather than through the guarded Link is what
+   * keeps that true.
+   */
+  async function handleSubmit(data, { close = false } = {}) {
     if (isNew) {
       const created = await createApplication(data);
+      if (close) {
+        navigate("/");
+        return;
+      }
       // Populate before navigating: the route changes on this same mounted
       // component, so isNew flips to false immediately and the render would
       // otherwise dereference a null application.
@@ -114,7 +127,13 @@ export default function ApplicationPage() {
       navigate(`/applications/${created.id}`, { replace: true });
       return;
     }
+
     setApplication(await updateApplication(id, data));
+    if (close) {
+      navigate("/");
+      return;
+    }
+    // Only worth flashing when the user stays to see it.
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -194,6 +213,7 @@ export default function ApplicationPage() {
         onSubmit={handleSubmit}
         onCancel={() => navigate("/")}
         submitLabel={isNew ? "Create application" : "Save changes"}
+        closeLabel={isNew ? "Create and close" : "Save and close"}
       />
 
       {isNew ? (

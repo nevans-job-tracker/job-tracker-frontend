@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   STATUS_OPTIONS,
   STATUS_LABELS,
@@ -86,12 +86,19 @@ export default function ApplicationForm({
   onSubmit,
   onCancel,
   submitLabel,
+  closeLabel,
   onDirtyChange,
 }) {
   const [form, setForm] = useState(() => toForm(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [statusChosen, setStatusChosen] = useState(false);
+
+  // Which of the two submit buttons was pressed. Both are type="submit" on the
+  // same form, so the intent has to be captured on click and read back here.
+  // A ref rather than state: it is read once during the submit that follows
+  // immediately, and setting state would re-render the form for nothing.
+  const closeAfterSave = useRef(false);
 
   // On a new record the status follows the date until the user picks one:
   // clearing the date shows Interested, typing one back shows Applied.
@@ -135,10 +142,16 @@ export default function ApplicationForm({
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // Read and clear together. If this save fails and the user then presses
+    // Save changes, a stale flag would navigate away from an error they have
+    // not read yet.
+    const close = closeAfterSave.current;
+    closeAfterSave.current = false;
+
     setSaving(true);
     setError(null);
     try {
-      await onSubmit({
+      const payload = {
         ...form,
         status,
         date_applied: blankToNull(form.date_applied),
@@ -168,7 +181,12 @@ export default function ApplicationForm({
         notes: blankToNull(form.notes),
         job_description: blankToNull(form.job_description),
         cover_letter: blankToNull(form.cover_letter),
-      });
+      };
+
+      // The options argument is omitted rather than passed as false, so the
+      // ordinary save keeps a one-argument contract and only the closing
+      // variant has anything to say.
+      await (close ? onSubmit(payload, { close: true }) : onSubmit(payload));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -432,12 +450,30 @@ export default function ApplicationForm({
         onChange={(next) => update("cover_letter", next)}
       />
 
+      {/* A hierarchy rather than three colours: quietest, secondary, primary.
+          Save and close takes the filled slot because it is the common path —
+          saving is usually followed by going back to the list — not because
+          of which control existed first. See KAN-58. */}
       <div className="form-actions">
-        <button type="button" onClick={onCancel} disabled={saving}>
+        <button
+          type="button"
+          className="button-quiet"
+          onClick={onCancel}
+          disabled={saving}
+        >
           Cancel
         </button>
-        <button type="submit" disabled={saving}>
+        <button type="submit" className="button-secondary" disabled={saving}>
           {saving ? "Saving..." : submitLabel || "Save"}
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          onClick={() => {
+            closeAfterSave.current = true;
+          }}
+        >
+          {closeLabel || "Save and close"}
         </button>
       </div>
     </form>
