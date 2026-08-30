@@ -246,7 +246,6 @@ export default function ListPage() {
         <>
           <ApplicationList
             applications={applications}
-            onOpen={(app) => navigate(`/applications/${app.id}`)}
             sortBy={sortBy}
             sortDir={sortDir}
             onSortChange={(col, dir) => setParams({ sort_by: col, sort_dir: dir })}

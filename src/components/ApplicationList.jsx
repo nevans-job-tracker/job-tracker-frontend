@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge.jsx";
 import { isOpenableLink } from "../jobLink.js";
 import {
@@ -73,7 +74,6 @@ function formatExperience(years) {
 
 export default function ApplicationList({
   applications,
-  onOpen,
   sortBy,
   sortDir,
   onSortChange,
@@ -136,25 +136,17 @@ export default function ApplicationList({
       </thead>
       <tbody>
         {applications.map((app) => (
-          <tr
-            key={app.id}
-            className="row-clickable"
-            tabIndex={0}
-            onClick={() => onOpen(app)}
-            onKeyDown={(e) => {
-              // Only when the row itself has focus. The link inside it is
-              // separately focusable, and this handler calls preventDefault —
-              // so without this guard, Enter on the link would suppress the
-              // anchor's own activation and navigate to the detail screen
-              // instead of opening the posting.
-              if (e.target !== e.currentTarget) return;
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onOpen(app);
-              }
-            }}
-          >
-            <td>{app.company}</td>
+          // The hover highlight stays although the row is no longer
+          // clickable. At ten columns it is what lets the eye track across a
+          // row, which is a reading aid independent of clicking — and the
+          // links below carry the affordance, so nothing relies on it to look
+          // actionable.
+          <tr key={app.id} className="row-hover">
+            <td>
+              <Link className="record-link" to={`/applications/${app.id}`}>
+                {app.company}
+              </Link>
+            </td>
             <td className="col-wide col-link">
               {isOpenableLink(app.job_link) ? (
                 <a
@@ -167,7 +159,6 @@ export default function ApplicationList({
                   // The glyph is identical on every row, so the company is
                   // what makes one link distinguishable from another.
                   aria-label={`Open the posting for ${app.company} in a new tab`}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   ↗
                 </a>
@@ -175,7 +166,15 @@ export default function ApplicationList({
                 "—"
               )}
             </td>
-            <td className="col-wide">{app.role_title}</td>
+            {/* The second way in, and the one KAN-60 was asked for. Company
+                carries it too because this column does not exist below 900px
+                — Role alone would leave a phone with no way to open a
+                record. */}
+            <td className="col-wide">
+              <Link className="record-link" to={`/applications/${app.id}`}>
+                {app.role_title}
+              </Link>
+            </td>
             <td className="col-wide">
               {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
             </td>
@@ -195,14 +194,7 @@ export default function ApplicationList({
                 className={`col-wide status-select badge-${app.status}`}
                 aria-label={`Status for ${app.company}`}
                 value={app.status}
-                // Without this, changing a status also opens the detail
-                // screen. The keyboard case is already covered by the row's
-                // handler ignoring events from inside it (KAN-45).
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onStatusChange?.(app, e.target.value);
-                }}
+                onChange={(e) => onStatusChange?.(app, e.target.value)}
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>

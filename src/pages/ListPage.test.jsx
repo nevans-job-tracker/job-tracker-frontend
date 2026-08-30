@@ -439,10 +439,21 @@ describe("ListPage", () => {
   });
 
   describe("navigation", () => {
-    it("opens an application when its row is clicked", async () => {
+    it("opens an application from the company link", async () => {
+      // The whole row used to be clickable. Since KAN-60 only Company and
+      // Role are, which is what lets a per-row control exist at all.
       setup();
       await userEvent.click(await screen.findByText("Company 01"));
       expect(await screen.findByText("Detail screen")).toBeInTheDocument();
+    });
+
+    it("does not open one from the rest of the row", async () => {
+      setup();
+      await screen.findByText("Company 01");
+      const row = screen.getAllByRole("row")[1];
+      // The Applied cell is the last one and carries nothing interactive.
+      await userEvent.click(row.cells[row.cells.length - 1]);
+      expect(screen.queryByText("Detail screen")).not.toBeInTheDocument();
     });
 
     it("goes to the new-entry screen from the add button", async () => {

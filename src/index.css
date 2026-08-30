@@ -476,17 +476,29 @@ textarea {
   padding: 40px 0;
 }
 
-.row-clickable {
-  cursor: pointer;
-}
-
-.row-clickable:hover {
+/* Kept after the row stopped being clickable (KAN-60): at ten columns the
+   highlight is what lets the eye track across a row. No cursor change, so it
+   does not claim to be actionable. */
+.row-hover:hover {
   background: var(--surface-subtle);
 }
 
-.row-clickable:focus-visible {
+/* Company and Role open the record. The affordance lives here now rather than
+   on the row. */
+.record-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.record-link:hover {
+  text-decoration: underline;
+}
+
+.record-link:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 .cell-sub {

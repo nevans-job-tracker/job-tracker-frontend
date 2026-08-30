@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import ApplicationList from "./ApplicationList.jsx";
 import { STATUS_LABELS } from "../labels.js";
@@ -40,19 +41,20 @@ const APPLICATIONS = [
 ];
 
 function setup(props = {}) {
-  const onOpen = vi.fn();
+
   const onSortChange = vi.fn();
   render(
-    <ApplicationList
+    <MemoryRouter>
+      <ApplicationList
       applications={APPLICATIONS}
-      onOpen={onOpen}
       sortBy="date_applied"
       sortDir="desc"
       onSortChange={onSortChange}
-      {...props}
-    />
+        {...props}
+      />
+    </MemoryRouter>
   );
-  return { onOpen, onSortChange };
+  return { onSortChange };
 }
 
 describe("ApplicationList", () => {
@@ -67,18 +69,40 @@ describe("ApplicationList", () => {
     expect(screen.getByText(/no applications yet/i)).toBeInTheDocument();
   });
 
-  it("opens the application when a row is clicked", async () => {
-    const { onOpen } = setup();
-    await userEvent.click(screen.getByText("Northwind"));
-    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+  it("opens the application from the company name", async () => {
+    setup();
+    expect(screen.getByRole("link", { name: "Northwind" })).toHaveAttribute(
+      "href",
+      "/applications/1"
+    );
   });
 
-  it("opens the application from the keyboard", async () => {
-    const { onOpen } = setup();
+  it("opens it from the role title too", async () => {
+    // Role is col-wide, so it cannot be the only way in — a phone would have
+    // none. Company carries it as well. See KAN-60.
+    setup();
+    expect(screen.getByRole("link", { name: "QA Engineer" })).toHaveAttribute(
+      "href",
+      "/applications/1"
+    );
+  });
+
+  it("is a real link, so it can be middle-clicked or opened in a new tab", () => {
+    // Previously a div with tabIndex and a keydown handler, which none of that
+    // works on.
+    setup();
+    const link = screen.getByRole("link", { name: "Northwind" });
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveClass("record-link");
+  });
+
+  it("leaves the rest of the row inert", async () => {
+    setup();
     const row = screen.getByText("Northwind").closest("tr");
-    row.focus();
-    await userEvent.keyboard("{Enter}");
-    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+    expect(row).not.toHaveAttribute("tabindex");
+    expect(row).not.toHaveClass("row-clickable");
+    // The date cell is not a way in.
+    expect(within(row).queryByRole("link", { name: "2026-03-01" })).toBeNull();
   });
 
   it("has no per-row action buttons — actions moved to the detail screen", () => {
@@ -274,8 +298,10 @@ describe("the job posting link (KAN-45)", () => {
   });
 
   it("renders no link for an application without one", () => {
+    // Counted by class rather than by role: since KAN-60 every row also has
+    // Company and Role links, so a bare role count would mean nothing.
     setup();
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(document.querySelectorAll(".link-out")).toHaveLength(1);
   });
 
   it("renders no link for a value that is not http(s)", () => {
@@ -284,36 +310,17 @@ describe("the job posting link (KAN-45)", () => {
     setup({
       applications: [{ ...APPLICATIONS[0], job_link: "javascript:alert(1)" }],
     });
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(document.querySelector(".link-out")).toBeNull();
   });
 
-  it("does not also open the detail screen when clicked", async () => {
-    const { onOpen } = setup();
-    await userEvent.click(link());
-    expect(onOpen).not.toHaveBeenCalled();
-  });
-
-  it("leaves the rest of the row opening the detail screen", async () => {
-    const { onOpen } = setup();
-    await userEvent.click(screen.getByText("Northwind"));
-    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
-  });
-
-  it("does not navigate the row when the link is activated by keyboard", async () => {
-    // The row's handler calls preventDefault, so without a guard on the event
-    // target, Enter here would suppress the anchor and open the detail screen
-    // instead — the opposite of what was pressed.
-    const { onOpen } = setup();
-    link().focus();
-    await userEvent.keyboard("{Enter}");
-    expect(onOpen).not.toHaveBeenCalled();
-  });
-
-  it("still opens the detail screen from the row itself", async () => {
-    const { onOpen } = setup();
-    screen.getByText("Northwind").closest("tr").focus();
-    await userEvent.keyboard("{Enter}");
-    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+  it("goes to the posting, not to the detail screen", async () => {
+    // Since KAN-60 the row is inert, so this no longer needs a
+    // stopPropagation guard — the two links simply point at different places.
+    setup();
+    expect(link()).toHaveAttribute("href", "https://northwind.example/jobs/1");
+    expect(
+      screen.getByRole("link", { name: "Northwind" })
+    ).toHaveAttribute("href", "/applications/1");
   });
 });
 
@@ -456,18 +463,13 @@ describe("changing a status from the list (KAN-59)", () => {
     );
   });
 
-  it("does not also open the detail screen", async () => {
-    // The row is clickable; without stopPropagation, changing a status would
-    // navigate away from the list at the same time.
-    const { onOpen } = setup({ onStatusChange: vi.fn() });
-    await userEvent.selectOptions(statusSelect("Northwind"), "offer");
-    expect(onOpen).not.toHaveBeenCalled();
-  });
-
-  it("leaves the rest of the row opening the detail screen", async () => {
-    const { onOpen } = setup({ onStatusChange: vi.fn() });
-    await userEvent.click(screen.getByText("Northwind"));
-    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+  it("is not inside the record link", async () => {
+    // KAN-60 made the row inert, so the select no longer needs a
+    // stopPropagation guard. What must stay true is that it is not nested
+    // within the link, which would make every change a navigation.
+    setup({ onStatusChange: vi.fn() });
+    const select = statusSelect("Northwind");
+    expect(select.closest("a")).toBeNull();
   });
 
   it("names the row it belongs to, for assistive technology", () => {
