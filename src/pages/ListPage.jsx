@@ -1,6 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { listApplications, listSources } from "../api/client.js";
+import {
+  listApplications,
+  listSources,
+  updateApplication,
+} from "../api/client.js";
 import { toCsv, csvFilename, downloadCsv } from "../csv.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
@@ -148,6 +152,36 @@ export default function ListPage() {
     return () => clearTimeout(timeout);
   }, [loadFirstPage]);
 
+  /**
+   * Changes a status from the list, without leaving it (KAN-59).
+   *
+   * Applied optimistically so the control responds at once, then reverted if
+   * the save fails — a select left showing a value the server rejected is a
+   * lie, and whatever the user does next would be based on it.
+   *
+   * The row is deliberately not re-sorted or re-fetched. When the list is
+   * sorted by status, changing one makes its position stale — but rows
+   * relocating under the cursor is worse than being briefly out of order.
+   */
+  async function handleStatusChange(app, status) {
+    if (status === app.status) return;
+    const previous = app.status;
+
+    const apply = (value) =>
+      setApplications((rows) =>
+        rows.map((row) => (row.id === app.id ? { ...row, status: value } : row))
+      );
+
+    apply(status);
+    setError(null);
+    try {
+      await updateApplication(app.id, { status });
+    } catch (err) {
+      apply(previous);
+      setError(err.message);
+    }
+  }
+
   async function handleLoadMore() {
     setLoadingMore(true);
     setError(null);
@@ -216,6 +250,7 @@ export default function ListPage() {
             sortBy={sortBy}
             sortDir={sortDir}
             onSortChange={(col, dir) => setParams({ sort_by: col, sort_dir: dir })}
+            onStatusChange={handleStatusChange}
           />
 
           {remaining > 0 && (

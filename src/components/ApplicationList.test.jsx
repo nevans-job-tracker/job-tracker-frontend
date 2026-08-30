@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ApplicationList from "./ApplicationList.jsx";
+import { STATUS_LABELS } from "../labels.js";
 
 const APPLICATIONS = [
   {
@@ -235,7 +236,11 @@ describe("ApplicationList", () => {
         ],
       });
       const row = screen.getByText("Initech").closest("tr");
-      expect(within(row).getByText("Interested")).toBeInTheDocument();
+      // Scoped to the badge: since KAN-59 the cell also holds a select whose
+      // selected option carries the same text.
+      expect(
+        within(row).getByText("Interested", { selector: ".badge" })
+      ).toBeInTheDocument();
       expect(within(row).getAllByText("—").length).toBeGreaterThan(0);
     });
   });
@@ -425,5 +430,67 @@ describe("employment type in the list (KAN-51)", () => {
     setup();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).not.toContain("Location");
+  });
+});
+
+describe("changing a status from the list (KAN-59)", () => {
+  const statusSelect = (company) =>
+    screen.getByLabelText(`Status for ${company}`);
+
+  it("offers every status, showing the current one", () => {
+    setup();
+    const select = statusSelect("Northwind");
+    expect(select).toHaveValue("applied");
+    expect([...select.options].map((o) => o.value)).toEqual(
+      Object.keys(STATUS_LABELS)
+    );
+  });
+
+  it("reports the change with the row it belongs to", async () => {
+    const onStatusChange = vi.fn();
+    setup({ onStatusChange });
+    await userEvent.selectOptions(statusSelect("Northwind"), "posting_closed");
+    expect(onStatusChange).toHaveBeenCalledWith(
+      APPLICATIONS[0],
+      "posting_closed"
+    );
+  });
+
+  it("does not also open the detail screen", async () => {
+    // The row is clickable; without stopPropagation, changing a status would
+    // navigate away from the list at the same time.
+    const { onOpen } = setup({ onStatusChange: vi.fn() });
+    await userEvent.selectOptions(statusSelect("Northwind"), "offer");
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rest of the row opening the detail screen", async () => {
+    const { onOpen } = setup({ onStatusChange: vi.fn() });
+    await userEvent.click(screen.getByText("Northwind"));
+    expect(onOpen).toHaveBeenCalledWith(APPLICATIONS[0]);
+  });
+
+  it("names the row it belongs to, for assistive technology", () => {
+    // Nine identical dropdowns otherwise read as one repeated control.
+    setup();
+    expect(statusSelect("Globex")).toBeInTheDocument();
+  });
+
+  it("carries its status colour rather than a default grey", () => {
+    // §4.4 chose those pairs deliberately; a plain select would cost the list
+    // its at-a-glance scan.
+    setup();
+    expect(statusSelect("Northwind")).toHaveClass("badge-applied");
+    expect(statusSelect("Globex")).toHaveClass("badge-offer");
+  });
+
+  it("keeps the badge for narrow screens and the select for wide", () => {
+    // The one cell whose content is responsive rather than its presence: a
+    // mis-tap here changes data, which is why the phone does not get it.
+    setup();
+    const row = screen.getByText("Northwind").closest("tr");
+    const cell = row.querySelector(".col-status");
+    expect(cell.querySelector(".col-narrow .badge")).toBeInTheDocument();
+    expect(cell.querySelector("select")).toHaveClass("col-wide");
   });
 });

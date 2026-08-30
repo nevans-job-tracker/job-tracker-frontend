@@ -1,6 +1,10 @@
 import StatusBadge from "./StatusBadge.jsx";
 import { isOpenableLink } from "../jobLink.js";
-import { EMPLOYMENT_TYPE_LABELS } from "../labels.js";
+import {
+  EMPLOYMENT_TYPE_LABELS,
+  STATUS_LABELS,
+  STATUS_OPTIONS,
+} from "../labels.js";
 
 /**
  * Thousands, with a K — 106400 becomes "106K", rounded to nearest.
@@ -73,6 +77,7 @@ export default function ApplicationList({
   sortBy,
   sortDir,
   onSortChange,
+  onStatusChange,
 }) {
   function headerClick(col) {
     if (sortBy === col) {
@@ -178,8 +183,33 @@ export default function ApplicationList({
             <td className="col-wide">
               {formatExperience(app.years_experience_min)}
             </td>
-            <td>
-              <StatusBadge status={app.status} />
+            {/* The only cell whose *content* is responsive rather than its
+                presence. A dropdown here is a mis-tap hazard on touch, and
+                unlike KAN-45's link a mis-tap changes data — so the phone
+                keeps the badge and the desktop gets the control. See KAN-59. */}
+            <td className="col-status">
+              <span className="col-narrow">
+                <StatusBadge status={app.status} />
+              </span>
+              <select
+                className={`col-wide status-select badge-${app.status}`}
+                aria-label={`Status for ${app.company}`}
+                value={app.status}
+                // Without this, changing a status also opens the detail
+                // screen. The keyboard case is already covered by the row's
+                // handler ignoring events from inside it (KAN-45).
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onStatusChange?.(app, e.target.value);
+                }}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
             </td>
             <td className="col-wide col-salary">{formatSalary(app)}</td>
             <td>

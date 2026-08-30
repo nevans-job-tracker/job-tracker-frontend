@@ -3,13 +3,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
-import { listApplications, listSources } from "../api/client.js";
+import {
+  listApplications,
+  listSources,
+  updateApplication,
+} from "../api/client.js";
 import { downloadCsv } from "../csv.js";
 import { STATUS_LABELS } from "../labels.js";
 
 vi.mock("../api/client.js", () => ({
   listApplications: vi.fn(),
   listSources: vi.fn().mockResolvedValue({ sources: [] }),
+  updateApplication: vi.fn().mockResolvedValue({}),
 }));
 
 // toCsv stays real, so these exercise the actual file the browser would get.
@@ -446,5 +451,70 @@ describe("ListPage", () => {
       await userEvent.click(screen.getByRole("button", { name: /add application/i }));
       expect(await screen.findByText("New application")).toBeInTheDocument();
     });
+  });
+});
+
+describe("changing a status from the list (KAN-59)", () => {
+  const firstStatus = () =>
+    screen.getByLabelText(`Status for ${screen.getAllByRole("row")[1].cells[0].textContent}`);
+
+  it("saves the change", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    await userEvent.selectOptions(firstStatus(), "posting_closed");
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "posting_closed" })
+    );
+  });
+
+  it("shows the new value immediately, without refetching the list", async () => {
+    // Optimistic: the control has to respond at once, and a refetch would
+    // also re-sort the row out from under the cursor.
+    setup();
+    await screen.findByText("Company 01");
+    const before = listApplications.mock.calls.length;
+
+    await userEvent.selectOptions(firstStatus(), "offer");
+    expect(firstStatus()).toHaveValue("offer");
+    expect(listApplications.mock.calls.length).toBe(before);
+  });
+
+  it("reverts and explains when the save fails", async () => {
+    // A select left showing a value the server rejected is a lie, and
+    // whatever the user does next would be based on it.
+    updateApplication.mockRejectedValueOnce(new Error("Application not found"));
+    setup();
+    await screen.findByText("Company 01");
+    const original = firstStatus().value;
+
+    await userEvent.selectOptions(firstStatus(), "ghosted");
+    expect(await screen.findByText(/application not found/i)).toBeInTheDocument();
+    await waitFor(() => expect(firstStatus()).toHaveValue(original));
+  });
+
+  it("does nothing when the value has not actually changed", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const current = firstStatus().value;
+    await userEvent.selectOptions(firstStatus(), current);
+    expect(updateApplication).not.toHaveBeenCalled();
+  });
+
+  it("changes only the row it was asked about", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const second = screen.getByLabelText("Status for Company 02");
+    const before = second.value;
+
+    await userEvent.selectOptions(firstStatus(), "withdrawn");
+    expect(second).toHaveValue(before);
+  });
+
+  it("does not navigate to the detail screen", async () => {
+    const seen = setup();
+    await screen.findByText("Company 01");
+    await userEvent.selectOptions(firstStatus(), "rejected");
+    await waitFor(() => expect(updateApplication).toHaveBeenCalled());
+    expect(seen.url).toBe("/");
   });
 });
