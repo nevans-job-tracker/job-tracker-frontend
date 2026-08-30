@@ -34,6 +34,10 @@ export const STATUS_LABELS = {
   offer: "Offer",
   rejected: "Rejected",
   ghosted: "Ghosted",
+  // The terminal states read in order of who ended it: they decided (rejected),
+  // they went quiet (ghosted), circumstance (posting closed), you decided
+  // (withdrawn). The database appends this one — see the KAN-57 revision.
+  posting_closed: "Posting Closed",
   withdrawn: "Withdrawn",
 };
 

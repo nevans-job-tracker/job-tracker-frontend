@@ -47,6 +47,11 @@
   --badge-rejected-fg: #991b1b;
   --badge-withdrawn-bg: #ede9fe;
   --badge-withdrawn-fg: #5b21b6;
+  /* A cool slate. Deliberately not a decision colour: nothing was decided
+     about the candidate, the posting simply went away (KAN-57). Distinct from
+     the warm grey `ghosted` wears, which is a different kind of nothing. */
+  --badge-closed-bg: #e2e8f0;
+  --badge-closed-fg: #334155;
 }
 
 /* The badges are not inverted mechanically. Flipping a light tint to its dark
@@ -94,6 +99,8 @@
   --badge-rejected-fg: #fecaca;
   --badge-withdrawn-bg: #3b2a63;
   --badge-withdrawn-fg: #ddd6fe;
+  --badge-closed-bg: #2b3648;
+  --badge-closed-fg: #cbd5e1;
 }
 
 * {
@@ -720,4 +727,8 @@ textarea {
 .badge-withdrawn {
   background: var(--badge-withdrawn-bg);
   color: var(--badge-withdrawn-fg);
+}
+.badge-posting_closed {
+  background: var(--badge-closed-bg);
+  color: var(--badge-closed-fg);
 }
