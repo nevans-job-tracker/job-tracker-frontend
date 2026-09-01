@@ -76,10 +76,18 @@ export const INACTIVE_STATUSES = STATUS_OPTIONS.filter(
 // of the code or by a value arriving from an old bookmark.
 export const STATUS_SET_PREFIX = "set:";
 
+// All first, as the broadest option — the same place "All Sources" sits in the
+// filter beside it. It also stops the list stuttering: with All in the middle,
+// "Active Statuses" was separated from the "Active" group heading below by an
+// unrelated option, so the word arrived twice in four rows without the second
+// reading as a heading for the first (KAN-65).
+//
+// The default is still "active". A select shows what is selected rather than
+// what is first, so it costs nothing to be second here.
 export const STATUS_SET_OPTIONS = [
+  ["all", "All Statuses"],
   ["active", "Active Statuses"],
   ["inactive", "Inactive Statuses"],
-  ["all", "All Statuses"],
 ];
 
 // Wellfound's bands, adopted rather than invented so the values match what the

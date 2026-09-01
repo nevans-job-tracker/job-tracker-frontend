@@ -419,6 +419,26 @@ describe("ListPage", () => {
       expect(statusSelect()).toHaveValue("ghosted");
     });
 
+    it("lists the sets broadest first, above both groups", async () => {
+      // The order is the story (KAN-65): All in the middle separated
+      // "Active Statuses" from the "Active" heading that explains it.
+      setup();
+      await screen.findByText("Company 01");
+      const options = within(statusSelect()).getAllByRole("option");
+
+      expect(options.slice(0, 3).map((o) => o.textContent)).toEqual([
+        "All Statuses",
+        "Active Statuses",
+        "Inactive Statuses",
+      ]);
+      // Sets are the choice, not members of either group.
+      expect(
+        options.slice(0, 3).every((o) => o.closest("optgroup") === null)
+      ).toBe(true);
+      // And the default is unmoved by being second.
+      expect(statusSelect()).toHaveValue("set:active");
+    });
+
     it("groups the statuses so each set's contents are visible", async () => {
       setup();
       await screen.findByText("Company 01");
