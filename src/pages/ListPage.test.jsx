@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
@@ -421,17 +421,22 @@ describe("ListPage", () => {
 
     it("groups the statuses so each set's contents are visible", async () => {
       setup();
-      const groupOf = async (label) =>
-        (await screen.findByRole("option", { name: label })).closest("optgroup")
-          ?.label;
+      await screen.findByText("Company 01");
 
-      expect(await groupOf("Interested")).toBe("Active");
-      expect(await groupOf("Offer")).toBe("Active");
-      expect(await groupOf("Rejected")).toBe("Inactive");
-      expect(await groupOf("Posting Closed")).toBe("Inactive");
+      // Scoped to the filter, not the document. KAN-59 puts a status select in
+      // every row, so each label exists once per rendered row as well —
+      // querying globally finds those too and is ambiguous by construction.
+      const groupOf = (label) =>
+        within(statusSelect()).getByRole("option", { name: label })
+          .closest("optgroup")?.label;
+
+      expect(groupOf("Interested")).toBe("Active");
+      expect(groupOf("Offer")).toBe("Active");
+      expect(groupOf("Rejected")).toBe("Inactive");
+      expect(groupOf("Posting Closed")).toBe("Inactive");
       // The set options are not inside either group; they are the choice the
       // groups explain.
-      expect(await groupOf("Active Statuses")).toBeUndefined();
+      expect(groupOf("Active Statuses")).toBeUndefined();
     });
   });
 
