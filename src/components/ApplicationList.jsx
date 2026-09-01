@@ -101,10 +101,11 @@ export default function ApplicationList({
       <thead>
         <tr>
           <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
-          <th className="col-wide col-link">Link</th>
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}
           </th>
+          <th className="col-wide col-link">Link</th>
+          <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
           {/* Location was dropped here (KAN-51) to make room: the search is
               effectively all-remote, so the column said "Remote" on nearly
               every row. It is still stored, still searchable, and still on
@@ -121,7 +122,6 @@ export default function ApplicationList({
           >
             Experience{arrow("years_experience_min")}
           </th>
-          <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
           {/* "Pay" rather than "Salary": the column now holds an annual
               figure or an hourly rate (KAN-50). The database columns keep
               their salary_* names — see the story for why. */}
@@ -147,6 +147,15 @@ export default function ApplicationList({
                 {app.company}
               </Link>
             </td>
+            {/* The second way in, and the one KAN-60 was asked for. Company
+                carries it too because this column does not exist below 900px
+                — Role alone would leave a phone with no way to open a
+                record. */}
+            <td className="col-wide">
+              <Link className="record-link" to={`/applications/${app.id}`}>
+                {app.role_title}
+              </Link>
+            </td>
             <td className="col-wide col-link">
               {isOpenableLink(app.job_link) ? (
                 <a
@@ -165,22 +174,6 @@ export default function ApplicationList({
               ) : (
                 "—"
               )}
-            </td>
-            {/* The second way in, and the one KAN-60 was asked for. Company
-                carries it too because this column does not exist below 900px
-                — Role alone would leave a phone with no way to open a
-                record. */}
-            <td className="col-wide">
-              <Link className="record-link" to={`/applications/${app.id}`}>
-                {app.role_title}
-              </Link>
-            </td>
-            <td className="col-wide">
-              {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
-            </td>
-            <td className="col-wide">{app.source || "—"}</td>
-            <td className="col-wide">
-              {formatExperience(app.years_experience_min)}
             </td>
             {/* The only cell whose *content* is responsive rather than its
                 presence. A dropdown here is a mis-tap hazard on touch, and
@@ -202,6 +195,13 @@ export default function ApplicationList({
                   </option>
                 ))}
               </select>
+            </td>
+            <td className="col-wide">
+              {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
+            </td>
+            <td className="col-wide">{app.source || "—"}</td>
+            <td className="col-wide">
+              {formatExperience(app.years_experience_min)}
             </td>
             <td className="col-wide col-salary">{formatSalary(app)}</td>
             <td>

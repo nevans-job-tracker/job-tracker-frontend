@@ -40,6 +40,13 @@ const APPLICATIONS = [
   },
 ];
 
+/** Heading text with the sort arrow stripped, in table order. */
+function headerNames() {
+  return screen
+    .getAllByRole("columnheader")
+    .map((h) => h.textContent.replace(/[↑↓]/g, "").trim());
+}
+
 function setup(props = {}) {
 
   const onSortChange = vi.fn();
@@ -427,8 +434,11 @@ describe("employment type in the list (KAN-51)", () => {
 
   it("shows a dash when it was not recorded", () => {
     setup({ applications: [{ ...APPLICATIONS[0], employment_type: null }] });
+    // Located by heading rather than by a fixed index: the column moved in
+    // KAN-64 and a hardcoded position only says which cell was checked, not
+    // which column it belonged to.
     const row = screen.getByText("Northwind").closest("tr");
-    expect(row.cells[3]).toHaveTextContent("—");
+    expect(row.cells[headerNames().indexOf("Type")]).toHaveTextContent("—");
   });
 
   it("no longer offers a Location column", () => {
@@ -494,5 +504,40 @@ describe("changing a status from the list (KAN-59)", () => {
     const cell = row.querySelector(".col-status");
     expect(cell.querySelector(".col-narrow .badge")).toBeInTheDocument();
     expect(cell.querySelector("select")).toHaveClass("col-wide");
+  });
+});
+
+describe("column order (KAN-64)", () => {
+  it("leads with identity, then the two controls", () => {
+    setup();
+    expect(headerNames().slice(0, 4)).toEqual([
+      "Company",
+      "Role",
+      "Link",
+      "Status",
+    ]);
+  });
+
+  it("keeps every cell under its own heading", () => {
+    // thead and tbody are two separate lists in the same file. If they drift
+    // apart the table misaligns with no error anywhere — every value under
+    // the wrong title, and nothing throws. This is the guard for that.
+    setup();
+    const headers = headerNames();
+    const row = screen.getByText("Northwind").closest("tr");
+    const under = (name) => row.cells[headers.indexOf(name)];
+
+    expect(under("Company")).toHaveTextContent("Northwind");
+    expect(under("Role")).toHaveTextContent("QA Engineer");
+    expect(within(under("Link")).getByRole("link")).toHaveAttribute(
+      "href",
+      APPLICATIONS[0].job_link
+    );
+    expect(
+      within(under("Status")).getByLabelText("Status for Northwind")
+    ).toBeInTheDocument();
+    expect(under("Source")).toHaveTextContent("LinkedIn");
+    expect(under("Experience")).toHaveTextContent("5");
+    expect(under("Applied")).toHaveTextContent("2026-03-01");
   });
 });
