@@ -43,6 +43,45 @@ export const STATUS_LABELS = {
 
 export const STATUS_OPTIONS = Object.keys(STATUS_LABELS);
 
+// The lifecycle split the list filters on by default (KAN-62): an application
+// is either still in play or it is over.
+//
+// Subsets of STATUS_LABELS rather than a second ordering — they are listed in
+// the order that map already declares, so the dropdown's groups read the way
+// the lifecycle runs.
+//
+// This is the second place the split is written down; models.py has the other.
+// The status enum and its order are already duplicated the same way, so this
+// is a known cost rather than a new one, but a third copy would be worth
+// resisting.
+export const ACTIVE_STATUSES = [
+  "interested",
+  "applied",
+  "phone_screen",
+  "interview",
+  "offer",
+];
+
+// The complement, computed for the same reason the backend computes it: a
+// status added later cannot end up in neither group. It lands in Inactive,
+// which errs towards hiding a row rather than quietly reintroducing clutter.
+export const INACTIVE_STATUSES = STATUS_OPTIONS.filter(
+  (value) => !ACTIVE_STATUSES.includes(value)
+);
+
+// The set options that share the status dropdown with the individual statuses.
+//
+// Prefixed because one control drives two URL parameters: `set:` says "this is
+// a lifecycle set, not a status", so the two can never be confused by a reader
+// of the code or by a value arriving from an old bookmark.
+export const STATUS_SET_PREFIX = "set:";
+
+export const STATUS_SET_OPTIONS = [
+  ["active", "Active Statuses"],
+  ["inactive", "Inactive Statuses"],
+  ["all", "All Statuses"],
+];
+
 // Wellfound's bands, adopted rather than invented so the values match what the
 // postings already say. See REQUIREMENTS.md §2 — these are their taxonomy.
 //

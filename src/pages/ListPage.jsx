@@ -9,12 +9,17 @@ import { toCsv, csvFilename, downloadCsv } from "../csv.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
+import { STATUS_SET_PREFIX } from "../labels.js";
 
 const PAGE_SIZE = 50;
 
 const DEFAULTS = {
   search: "",
   status: "",
+  // Finished applications are off screen on load (KAN-62). This is the one
+  // default whose change is visible: a saved link with no `activity` on it now
+  // opens filtered, which is intended and has nothing to migrate.
+  activity: "active",
   source: "",
   show: "active",
   sort_by: "date_applied",
@@ -29,6 +34,12 @@ export default function ListPage() {
   // survives a reload and can be linked to. See REQUIREMENTS.md §4.2.
   const search = searchParams.get("search") ?? DEFAULTS.search;
   const status = searchParams.get("status") ?? DEFAULTS.status;
+  // A hand-written `?status=rejected` has to return rejected rows. Falling
+  // back to the default here instead would send activity=active alongside it
+  // and quietly return nothing — the same trap the API resolves the same way,
+  // mirrored so the two cannot disagree.
+  const activity =
+    searchParams.get("activity") ?? (status ? "all" : DEFAULTS.activity);
   const source = searchParams.get("source") ?? DEFAULTS.source;
   const show = searchParams.get("show") ?? DEFAULTS.show;
   const sortBy = searchParams.get("sort_by") ?? DEFAULTS.sort_by;
@@ -44,6 +55,7 @@ export default function ListPage() {
       const next = {
         search,
         status,
+        activity,
         source,
         show,
         sort_by: sortBy,
@@ -56,11 +68,12 @@ export default function ListPage() {
       }
       setSearchParams(params, { replace });
     },
-    [search, status, source, show, sortBy, sortDir, setSearchParams]
+    [search, status, activity, source, show, sortBy, sortDir, setSearchParams]
   );
 
   const [applications, setApplications] = useState([]);
   const [total, setTotal] = useState(0);
+  const [totalUnfiltered, setTotalUnfiltered] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -100,6 +113,7 @@ export default function ListPage() {
       const data = await listApplications({
         search,
         status,
+        activity,
         source,
         show,
         sort_by: sortBy,
@@ -121,6 +135,7 @@ export default function ListPage() {
       const data = await listApplications({
         search,
         status,
+        activity,
         source,
         show,
         sort_by: sortBy,
@@ -130,8 +145,9 @@ export default function ListPage() {
       });
       setApplications((prev) => (append ? [...prev, ...data.items] : data.items));
       setTotal(data.total);
+      setTotalUnfiltered(data.total_unfiltered);
     },
-    [search, status, source, show, sortBy, sortDir]
+    [search, status, activity, source, show, sortBy, sortDir]
   );
 
   // Search/filter/sort changes reset back to the first page.
@@ -200,6 +216,11 @@ export default function ListPage() {
 
   const remaining = total - applications.length;
 
+  // Everything the filters excluded (KAN-62). With archive state and lifecycle
+  // as independent axes, a row can be missing for either reason and neither
+  // dropdown says so on its own — so the count says it instead.
+  const hidden = totalUnfiltered - total;
+
   return (
     <>
       <header>
@@ -228,7 +249,18 @@ export default function ListPage() {
         source={source}
         onSourceChange={(value) => setParams({ source: value })}
         status={status}
-        onStatusChange={(value) => setParams({ status: value })}
+        activity={activity}
+        /* One dropdown, two parameters. A set clears the status; a specific
+           status widens the lifecycle to all, because asking for Rejected
+           while the lifecycle still says Active is an empty intersection
+           nobody meant to ask for. */
+        onStatusFilterChange={(value) =>
+          setParams(
+            value.startsWith(STATUS_SET_PREFIX)
+              ? { status: "", activity: value.slice(STATUS_SET_PREFIX.length) }
+              : { status: value, activity: "all" }
+          )
+        }
         show={show}
         onShowChange={(value) => setParams({ show: value })}
       />
@@ -237,6 +269,7 @@ export default function ListPage() {
         {remaining > 0
           ? `Showing ${applications.length} of ${total} applications`
           : `${total} application${total === 1 ? "" : "s"}`}
+        {hidden > 0 && ` · ${hidden} hidden by filters`}
       </p>
 
       {error && <div className="form-error">{error}</div>}

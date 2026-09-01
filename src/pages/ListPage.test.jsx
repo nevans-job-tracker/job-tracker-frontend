@@ -49,10 +49,13 @@ function LocationSpy({ onChange }) {
   return null;
 }
 
-function setup({ initialEntry = "/", total = 2, items } = {}) {
+function setup({ initialEntry = "/", total = 2, totalUnfiltered, items } = {}) {
   const seen = { url: null };
   listApplications.mockResolvedValue({
     total,
+    // Defaults to `total`, i.e. the filters hide nothing, so the count line
+    // stays out of the way of every test not about it.
+    total_unfiltered: totalUnfiltered ?? total,
     items: items ?? [application(1), application(2)],
   });
 
@@ -183,7 +186,7 @@ describe("ListPage", () => {
   });
 
   describe("archive filter", () => {
-    const showSelect = () => screen.getByLabelText(/show archived/i);
+    const showSelect = () => screen.getByLabelText(/filter by archive state/i);
 
     it("defaults to active, so archived records are hidden", async () => {
       setup();
@@ -221,7 +224,9 @@ describe("ListPage", () => {
       await waitFor(() =>
         expect(lastQuery()).toMatchObject({ status: "rejected", show: "archived" })
       );
-      expect(seen.url).toBe("/?status=rejected&show=archived");
+      // activity=all appears because the entry URL named a status without one;
+      // the next write makes that implied widening explicit.
+      expect(seen.url).toBe("/?status=rejected&activity=all&show=archived");
     });
 
     it("omits the default from the URL", async () => {
@@ -271,7 +276,10 @@ describe("ListPage", () => {
       const seen = setup();
       await screen.findByText("Company 01");
       await userEvent.selectOptions(screen.getByLabelText(/filter by status/i), "offer");
-      await waitFor(() => expect(seen.url).toBe("/?status=offer"));
+      // A specific status widens the lifecycle to all, so that both end up in
+      // the URL: asking for Offer while the lifecycle filter still said Active
+      // would be an intersection nobody chose.
+      await waitFor(() => expect(seen.url).toBe("/?status=offer&activity=all"));
     });
 
     it("writes sorting into the URL", async () => {
@@ -291,7 +299,10 @@ describe("ListPage", () => {
       // An unfiltered list should be a bare "/", not a URL full of defaults.
       const seen = setup({ initialEntry: "/?status=offer" });
       await screen.findByText("Company 01");
-      await userEvent.selectOptions(screen.getByLabelText(/filter by status/i), "");
+      await userEvent.selectOptions(
+        screen.getByLabelText(/filter by status/i),
+        "set:active"
+      );
       await waitFor(() => expect(seen.url).toBe("/"));
     });
   });
@@ -363,7 +374,90 @@ describe("ListPage", () => {
     it("labels the unfiltered option All Statuses", async () => {
       setup();
       expect(await screen.findByRole("option", { name: "All Statuses" }))
-        .toHaveValue("");
+        .toHaveValue("set:all");
+    });
+  });
+
+  describe("lifecycle filter (KAN-62)", () => {
+    const statusSelect = () => screen.getByLabelText(/filter by status/i);
+
+    it("hides finished applications on load", async () => {
+      setup();
+      await screen.findByText("Company 01");
+      expect(statusSelect()).toHaveValue("set:active");
+      expect(lastQuery()).toMatchObject({ activity: "active" });
+    });
+
+    it("asks for the finished ones when chosen", async () => {
+      const seen = setup();
+      await screen.findByText("Company 01");
+      await userEvent.selectOptions(statusSelect(), "set:inactive");
+
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({ activity: "inactive" })
+      );
+      expect(seen.url).toBe("/?activity=inactive");
+    });
+
+    it("widens the lifecycle when one status is picked", async () => {
+      // Otherwise Rejected and the Active default intersect to nothing.
+      setup();
+      await screen.findByText("Company 01");
+      await userEvent.selectOptions(statusSelect(), "rejected");
+
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({ status: "rejected", activity: "all" })
+      );
+    });
+
+    it("reads a hand-written status URL as every lifecycle", async () => {
+      // A link with no activity on it still has to return the status it names.
+      setup({ initialEntry: "/?status=ghosted" });
+      await waitFor(() =>
+        expect(lastQuery()).toMatchObject({ status: "ghosted", activity: "all" })
+      );
+      expect(statusSelect()).toHaveValue("ghosted");
+    });
+
+    it("groups the statuses so each set's contents are visible", async () => {
+      setup();
+      const groupOf = async (label) =>
+        (await screen.findByRole("option", { name: label })).closest("optgroup")
+          ?.label;
+
+      expect(await groupOf("Interested")).toBe("Active");
+      expect(await groupOf("Offer")).toBe("Active");
+      expect(await groupOf("Rejected")).toBe("Inactive");
+      expect(await groupOf("Posting Closed")).toBe("Inactive");
+      // The set options are not inside either group; they are the choice the
+      // groups explain.
+      expect(await groupOf("Active Statuses")).toBeUndefined();
+    });
+  });
+
+  describe("what the filters are hiding (KAN-62)", () => {
+    it("accounts for the rows that are not on screen", async () => {
+      setup({ total: 2, totalUnfiltered: 9 });
+      expect(
+        await screen.findByText(/7 hidden by filters/)
+      ).toBeInTheDocument();
+    });
+
+    it("says nothing when the filters hide nothing", async () => {
+      setup({ total: 2, totalUnfiltered: 2 });
+      await screen.findByText("Company 01");
+      expect(screen.queryByText(/hidden by filters/)).toBeNull();
+    });
+
+    it("counts against the whole table, not the page", async () => {
+      // 120 match the filters, 50 are rendered, 30 more exist that do not
+      // match. The hidden count is about the filters, not about paging.
+      setup({
+        total: 120,
+        totalUnfiltered: 150,
+        items: Array.from({ length: 50 }, (_, i) => application(i + 1)),
+      });
+      expect(await screen.findByText(/30 hidden by filters/)).toBeInTheDocument();
     });
   });
 
