@@ -7,6 +7,10 @@ import { listApplications, getApplication } from "./api/client.js";
 vi.mock("./api/client.js", () => ({
   listApplications: vi.fn().mockResolvedValue({ total: 0, items: [] }),
   listSources: vi.fn().mockResolvedValue({ sources: [] }),
+  // BuildMarker sits above the routes, so every route test mounts it (KAN-63).
+  getHealth: vi
+    .fn()
+    .mockResolvedValue({ status: "ok", build: { sha: "unknown", branch: "unknown" } }),
   getApplication: vi.fn().mockResolvedValue({
     id: 7,
     company: "Northwind",

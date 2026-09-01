@@ -48,6 +48,19 @@ export async function listApplications(params = {}) {
 }
 
 /**
+ * Liveness, and which build the API is running (KAN-63).
+ *
+ * Used to catch a half-finished deploy: this runbook is two manual steps in a
+ * required order, so a backend updated without its frontend is the easiest
+ * mistake it allows — and it shows up as a feature behaving strangely rather
+ * than as an error.
+ */
+export async function getHealth() {
+  const res = await fetch(`${API_URL}/health`);
+  return handleResponse(res);
+}
+
+/**
  * The distinct sources, for the list's Source filter (KAN-56).
  *
  * A separate call rather than a field on the list response: that response is

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listApplications,
   listSources,
+  getHealth,
   getApplication,
   getStatusHistory,
   createApplication,
@@ -30,6 +31,30 @@ beforeEach(() => {
 
 const calledUrl = () => global.fetch.mock.calls[0][0];
 const calledOptions = () => global.fetch.mock.calls[0][1];
+
+describe("getHealth", () => {
+  it("requests the health endpoint, which is not under /applications", async () => {
+    await getHealth();
+    expect(calledUrl()).toBe(`${BASE}/health`);
+  });
+
+  it("returns the build the API reports", async () => {
+    global.fetch.mockResolvedValue(
+      mockResponse({ body: { status: "ok", build: { sha: "c0ec8fc", branch: "develop" } } })
+    );
+    expect(await getHealth()).toEqual({
+      status: "ok",
+      build: { sha: "c0ec8fc", branch: "develop" },
+    });
+  });
+
+  it("raises like every other call when the API is unwell", async () => {
+    global.fetch.mockResolvedValue(
+      mockResponse({ ok: false, status: 500, body: { detail: "Down" } })
+    );
+    await expect(getHealth()).rejects.toThrow("Down");
+  });
+});
 
 describe("listSources", () => {
   it("requests the sources collection", async () => {
