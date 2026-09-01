@@ -21,13 +21,13 @@ import { getHealth } from "../api/client.js";
  * nothing passes them in the app.
  */
 export default function BuildMarker({ sha = BUILD_SHA, branch = BUILD_BRANCH }) {
-  const [apiSha, setApiSha] = useState(null);
+  const [api, setApi] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     getHealth()
       .then((data) => {
-        if (!cancelled) setApiSha(data?.build?.sha ?? null);
+        if (!cancelled) setApi(data?.build ?? null);
       })
       // An unreachable API is the list's story to tell, not this component's.
       // Staying quiet here avoids two complaints about one outage.
@@ -37,10 +37,24 @@ export default function BuildMarker({ sha = BUILD_SHA, branch = BUILD_BRANCH }) 
     };
   }, []);
 
-  // Only a disagreement between two *known* commits means anything. An
-  // unknown on either side is an unstamped build, which is not a mismatch.
-  const known = sha !== "unknown" && apiSha && apiSha !== "unknown";
-  const mismatch = Boolean(known && apiSha !== sha);
+  // Branches, not commits.
+  //
+  // The frontend and the backend are separate repositories with independent
+  // histories, so their SHAs are never equal and comparing them would report
+  // "half-deployed" on every load, forever. Branch names are the one thing
+  // the two repositories genuinely share.
+  //
+  // Narrower than the check this was meant to be: a frontend that was never
+  // rebuilt after its backend moved is still on the same branch and passes.
+  // What it does catch is halves deployed from different branches, which is
+  // the state where the two are running unrelated code.
+  //
+  // Only a disagreement between two *known* branches counts. An unknown on
+  // either side is an unstamped build, not a disagreement.
+  const apiBranch = api?.branch;
+  const known =
+    branch !== "unknown" && apiBranch && apiBranch !== "unknown";
+  const mismatch = Boolean(known && apiBranch !== branch);
 
   if (branch === RELEASE_BRANCH && !mismatch) return null;
 
@@ -51,12 +65,16 @@ export default function BuildMarker({ sha = BUILD_SHA, branch = BUILD_BRANCH }) 
     >
       {mismatch ? (
         <>
-          <strong>Half-deployed:</strong> this page is {sha}, the API is{" "}
-          {apiSha}
+          <strong>Half-deployed:</strong> this page was built from {branch},
+          the API is running {apiBranch}
         </>
       ) : (
         <>
           {branch} @ {sha}
+          {/* The API's own commit, shown rather than compared. Two
+              repositories, so the two SHAs are unrelated by construction —
+              but the operator still wants both of them. */}
+          {api?.sha ? ` · api ${api.sha}` : ""}
         </>
       )}
     </div>
