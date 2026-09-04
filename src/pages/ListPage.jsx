@@ -221,6 +221,9 @@ export default function ListPage() {
   // dropdown says so on its own — so the count says it instead.
   const hidden = totalUnfiltered - total;
 
+  // Both pay keys annualise (KAN-72), so both earn the note.
+  const sortsByPay = sortBy === "salary_min" || sortBy === "salary_max";
+
   return (
     <>
       <header>
@@ -275,6 +278,13 @@ export default function ListPage() {
           ? `Showing ${applications.length} of ${total} applications`
           : `${total} application${total === 1 ? "" : "s"}`}
         {hidden > 0 && ` · ${hidden} hidden by filters`}
+        {/* Only while a pay sort is running, because that is the only time it
+            is true of what is on screen (KAN-72). The 2080 is an assumption —
+            a contract is exactly the case where it may not hold — so the order
+            says where it came from rather than presenting itself as fact. Same
+            pattern as the hidden count beside it and the insights screen's
+            opening note: rendered when it applies, absent when it does not. */}
+        {sortsByPay && " · hourly rates annualised at 2080 h/yr to order them"}
       </p>
 
       {error && <div className="form-error">{error}</div>}

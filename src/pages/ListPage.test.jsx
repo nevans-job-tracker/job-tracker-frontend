@@ -486,6 +486,33 @@ describe("ListPage", () => {
     });
   });
 
+  describe("the pay sort says what it assumed (KAN-72)", () => {
+    it("names the multiplier while a pay sort is running", async () => {
+      // 2080 is an assumption, and a contract is exactly the case where it may
+      // not hold — so the list says where the order came from rather than
+      // presenting it as fact.
+      setup({ initialEntry: "/?sort_by=salary_min" });
+      expect(
+        await screen.findByText(/annualised at 2080 h\/yr/)
+      ).toBeInTheDocument();
+    });
+
+    it("says it for the max key too, which annualises on the same rule", async () => {
+      setup({ initialEntry: "/?sort_by=salary_max" });
+      expect(
+        await screen.findByText(/annualised at 2080 h\/yr/)
+      ).toBeInTheDocument();
+    });
+
+    it("stays quiet on every other sort", async () => {
+      // A note that is always there stops being read. This one is only true
+      // of what is on screen while a pay sort is active.
+      setup();
+      await screen.findByText("Company 01");
+      expect(screen.queryByText(/annualised/)).toBeNull();
+    });
+  });
+
   describe("export (KAN-39)", () => {
     const exportButton = () => screen.getByRole("button", { name: /export csv/i });
 

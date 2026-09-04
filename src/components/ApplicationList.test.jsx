@@ -50,7 +50,7 @@ function headerNames() {
 function setup(props = {}) {
 
   const onSortChange = vi.fn();
-  render(
+  const { container } = render(
     <MemoryRouter>
       <ApplicationList
       applications={APPLICATIONS}
@@ -61,7 +61,7 @@ function setup(props = {}) {
       />
     </MemoryRouter>
   );
-  return { onSortChange };
+  return { onSortChange, container };
 }
 
 describe("ApplicationList", () => {
@@ -113,8 +113,14 @@ describe("ApplicationList", () => {
   });
 
   it("has no per-row action buttons — actions moved to the detail screen", () => {
-    setup();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const { container } = setup();
+    // Scoped to the body since KAN-72: the Pay header carries two sort
+    // buttons. The rule §4.2 states is about *rows* — a per-row control is a
+    // mis-tap hazard on touch — and a header control is not one of those, so
+    // an unscoped "no buttons anywhere" query was asserting more than the
+    // rule says and would have blocked this for the wrong reason.
+    const body = container.querySelector("tbody");
+    expect(within(body).queryByRole("button")).not.toBeInTheDocument();
   });
 
   describe("sorting", () => {
@@ -421,8 +427,63 @@ describe("pay display (KAN-50)", () => {
   it("calls the column Pay, since it holds two kinds of thing", () => {
     setup();
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toContain("Pay");
-    expect(headers).not.toContain("Salary");
+    // A substring since KAN-72 put the two sort keys in this cell, so its text
+    // is now "Paymin max". The rule being protected is the *word* — Pay
+    // rather than Salary, because the column holds an annual figure or an
+    // hourly rate — not the cell's exact contents.
+    expect(headers.some((h) => h.startsWith("Pay"))).toBe(true);
+    expect(headers.some((h) => h.includes("Salary"))).toBe(false);
+  });
+});
+
+describe("sorting by pay (KAN-72)", () => {
+  it("offers min and max as separate targets", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /^min/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^max/ })).toBeInTheDocument();
+  });
+
+  it("sorts ascending when a pay key is first chosen", async () => {
+    const { onSortChange } = setup();
+    await userEvent.click(screen.getByRole("button", { name: /^min/ }));
+    expect(onSortChange).toHaveBeenCalledWith("salary_min", "asc");
+  });
+
+  it("toggles direction when the active key is clicked again", async () => {
+    const { onSortChange } = setup({ sortBy: "salary_min", sortDir: "asc" });
+    await userEvent.click(screen.getByRole("button", { name: /^min/ }));
+    expect(onSortChange).toHaveBeenCalledWith("salary_min", "desc");
+  });
+
+  it("switching from min to max starts ascending rather than inheriting", async () => {
+    // They are two columns that happen to share a header cell, so moving
+    // between them is a new column and follows the same rule as any other.
+    const { onSortChange } = setup({ sortBy: "salary_min", sortDir: "desc" });
+    await userEvent.click(screen.getByRole("button", { name: /^max/ }));
+    expect(onSortChange).toHaveBeenCalledWith("salary_max", "asc");
+  });
+
+  it("marks only the active key", () => {
+    setup({ sortBy: "salary_max", sortDir: "desc" });
+    expect(screen.getByRole("button", { name: /^max/ })).toHaveClass("is-active");
+    expect(screen.getByRole("button", { name: /^min/ })).not.toHaveClass(
+      "is-active"
+    );
+  });
+
+  it("puts the arrow on the key that is sorting, not on the cell", () => {
+    setup({ sortBy: "salary_max", sortDir: "desc" });
+    expect(screen.getByRole("button", { name: "max ↓" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "min" })).toBeInTheDocument();
+  });
+
+  it("leaves the word Pay unclickable", () => {
+    // Two sort keys and a label that does nothing — a third target reading
+    // "Pay" would have to mean one of them arbitrarily.
+    setup();
+    expect(
+      screen.queryByRole("button", { name: /^Pay/ })
+    ).not.toBeInTheDocument();
   });
 });
 

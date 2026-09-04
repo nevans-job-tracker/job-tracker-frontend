@@ -153,8 +153,34 @@ export default function ApplicationList({
           </th>
           {/* "Pay" rather than "Salary": the column now holds an annual
               figure or an hourly rate (KAN-50). The database columns keep
-              their salary_* names — see the story for why. */}
-          <th className="col-wide">Pay</th>
+              their salary_* names — see the story for why.
+
+              Two sort keys in one column (KAN-72), because the cell shows a
+              range and either end is a reasonable thing to order by: min
+              answers "what does this start at", max answers "how high could
+              this go". Rendered as two small targets rather than a cycling
+              header — every other column here is a two-state toggle, and
+              making one of them a four-state cycle would be undiscoverable
+              and inconsistent with the rest of the row. */}
+          <th className="col-wide col-pay">
+            <span className="pay-head-label">Pay</span>
+            <span className="pay-head-keys">
+              <button
+                type="button"
+                className={sortBy === "salary_min" ? "pay-key is-active" : "pay-key"}
+                onClick={() => headerClick("salary_min")}
+              >
+                min{arrow("salary_min")}
+              </button>
+              <button
+                type="button"
+                className={sortBy === "salary_max" ? "pay-key is-active" : "pay-key"}
+                onClick={() => headerClick("salary_max")}
+              >
+                max{arrow("salary_max")}
+              </button>
+            </span>
+          </th>
           <th onClick={() => headerClick("next_action_date")}>
             Next action{arrow("next_action_date")}
           </th>

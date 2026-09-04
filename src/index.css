@@ -411,13 +411,28 @@ textarea {
   cursor: default;
 }
 
+/* Sized as a target rather than as a glyph (KAN-73). It was a 1rem arrow with
+   2px of padding — roughly 20x16 — sitting in a row two or three times that
+   tall, so most of the cell looked clickable and was not, and hitting it with
+   a cursor took aim.
+
+   36px is the figure KAN-58 established for the back link, and it is the
+   minimum a finger needs; a cursor wants less, but there is no reason for two
+   numbers. It fills the cell, so the whole area under the column reacts. */
 .link-out {
-  display: inline-block;
-  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  /* Pulls the row's own vertical padding inside the target instead of leaving
+     it as dead space around one. Without this the cell grows and every row
+     gets taller to accommodate a control that was already fitting. */
+  margin: -8px auto;
   border-radius: 4px;
   color: var(--accent);
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 
@@ -985,4 +1000,43 @@ textarea {
 .band-posting_closed {
   fill: var(--badge-closed-bg);
   background: var(--badge-closed-bg);
+}
+
+/* Two sort targets in one header (KAN-72). The Pay cell shows a range, so
+   either end is a reasonable thing to order by — but a four-state cycling
+   header would be undiscoverable next to ten two-state toggles, so the keys
+   are their own small controls and the word "Pay" stops being clickable. */
+.col-pay {
+  white-space: nowrap;
+}
+
+.pay-head-label {
+  margin-right: 6px;
+}
+
+.pay-head-keys {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.pay-key {
+  /* A real button, so it is tabbable and announced as a control rather than
+     as decorated text — the KAN-60 rule about anchors, applied to the header. */
+  background: none;
+  border: none;
+  padding: 0 2px;
+  margin: 0;
+  font: inherit;
+  font-weight: 400;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pay-key:hover {
+  color: var(--text);
+}
+
+.pay-key.is-active {
+  color: var(--text);
+  font-weight: 600;
 }
