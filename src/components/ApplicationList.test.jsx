@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
-import ApplicationList from "./ApplicationList.jsx";
+import ApplicationList, { formatAge } from "./ApplicationList.jsx";
 import { STATUS_LABELS } from "../labels.js";
 
 const APPLICATIONS = [
@@ -539,5 +539,95 @@ describe("column order (KAN-64)", () => {
     expect(under("Source")).toHaveTextContent("LinkedIn");
     expect(under("Experience")).toHaveTextContent("5");
     expect(under("Applied")).toHaveTextContent("2026-03-01");
+  });
+});
+
+describe("formatAge (KAN-68)", () => {
+  const now = new Date(2026, 8, 4, 12, 0); // 2026-09-04 midday, local
+
+  it.each([
+    ["2026-09-04T09:15:00", "Today"],
+    ["2026-09-03T23:59:00", "1d"],
+    ["2026-08-28T10:00:00", "7d"],
+    ["2026-08-23T10:00:00", "12d"],
+    ["2026-08-20T10:00:00", "15d"],
+  ])("%s reads as %s", (created, expected) => {
+    expect(formatAge(created, now)).toBe(expected);
+  });
+
+  it("counts calendar days, not elapsed hours", () => {
+    // Added at 23:59 last night is 1 day old, not 0 — twelve elapsed hours
+    // would round to today and read as though it had just arrived.
+    expect(formatAge("2026-09-03T23:59:00", now)).toBe("1d");
+    expect(formatAge("2026-09-04T00:01:00", now)).toBe("Today");
+  });
+
+  it("says Today rather than 0d", () => {
+    // "0d" reads as an absence rather than a value.
+    expect(formatAge("2026-09-04T00:00:00", now)).not.toBe("0d");
+  });
+
+  it("never rolls days up into weeks or months", () => {
+    // §4.4's rule for the timeline, same reason: only one of "2w" and "15d"
+    // compares against its neighbours without thinking.
+    for (const days of [7, 14, 30, 90]) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - days);
+      expect(formatAge(d.toISOString(), now)).toBe(`${days}d`);
+    }
+  });
+
+  it.each([null, undefined, "", "not a date"])(
+    "shows a dash rather than inventing an age for %s",
+    (value) => {
+      expect(formatAge(value, now)).toBe("—");
+    }
+  );
+
+  it("does not produce a negative age for a clock-skewed future date", () => {
+    expect(formatAge("2026-09-06T10:00:00", now)).toBe("Today");
+  });
+});
+
+describe("the Added column (KAN-68)", () => {
+  const header = () =>
+    screen.getAllByRole("columnheader").find((h) => h.textContent.startsWith("Added"));
+
+  it("shows how long ago each application was added", () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 12);
+    setup({
+      applications: [{ ...APPLICATIONS[0], created_at: d.toISOString() }],
+    });
+    expect(screen.getByText("12d")).toBeInTheDocument();
+  });
+
+  it("carries the exact timestamp in a tooltip", () => {
+    // The column answers "how old"; the precise moment is one hover away.
+    setup({
+      applications: [{ ...APPLICATIONS[0], created_at: "2026-08-23T16:01:48" }],
+    });
+    const cell = screen.getByText(/\d+d|Today/).closest("td");
+    expect(cell).toHaveAttribute("title", "2026-08-23T16:01:48");
+  });
+
+  it("sorts by the column the API actually accepts", async () => {
+    // created_at is already in the route's sort_by whitelist; a typo here
+    // would 422 rather than fail visibly.
+    const { onSortChange } = setup();
+    await userEvent.click(header());
+    expect(onSortChange).toHaveBeenCalledWith("created_at", "asc");
+  });
+
+  it("is desktop-only, so the phone budget is untouched", () => {
+    setup();
+    expect(header()).toHaveClass("col-wide");
+  });
+
+  it("sits immediately before Applied", () => {
+    setup();
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    const added = headers.findIndex((h) => h.startsWith("Added"));
+    expect(headers[added + 1]).toMatch(/^Applied/);
   });
 });

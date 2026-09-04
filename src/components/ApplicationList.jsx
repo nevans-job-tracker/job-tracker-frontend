@@ -72,6 +72,35 @@ function formatExperience(years) {
   return n === 0 ? "Entry" : `${n}+`;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How long ago a record was added, in days (KAN-68).
+ *
+ * `created_at` is a timestamp, but the question asked of it is "how old is
+ * this" — which day it was is rarely the point. A count of days answers that
+ * directly, where an ISO date makes the reader do the arithmetic against
+ * today.
+ *
+ * Never rolled up into weeks or months, the same rule §4.4 sets for the
+ * timeline and for the same reason: "2w" and "15d" are the same span, but
+ * only one compares against its neighbours without thinking.
+ *
+ * Compared by calendar day rather than by elapsed hours, so something added
+ * late last night reads as 1 day rather than 0.
+ */
+export function formatAge(createdAt, now = new Date()) {
+  if (!createdAt) return "—";
+  const then = new Date(createdAt);
+  if (Number.isNaN(then.getTime())) return "—";
+
+  const startOf = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((startOf(now) - startOf(then)) / DAY_MS);
+
+  if (days <= 0) return "Today";
+  return `${days}d`;
+}
+
 export default function ApplicationList({
   applications,
   sortBy,
@@ -128,6 +157,9 @@ export default function ApplicationList({
           <th className="col-wide">Pay</th>
           <th onClick={() => headerClick("next_action_date")}>
             Next action{arrow("next_action_date")}
+          </th>
+          <th className="col-wide" onClick={() => headerClick("created_at")}>
+            Added{arrow("created_at")}
           </th>
           <th onClick={() => headerClick("date_applied")}>
             Applied{arrow("date_applied")}
@@ -215,6 +247,12 @@ export default function ApplicationList({
               ) : (
                 "—"
               )}
+            </td>
+            {/* The exact timestamp is one hover away; the column itself
+                answers "how old is this". col-wide, so hover is always
+                available where the column is. */}
+            <td className="col-wide col-date" title={app.created_at || undefined}>
+              {formatAge(app.created_at)}
             </td>
             <td className="col-date">{app.date_applied || "—"}</td>
           </tr>
