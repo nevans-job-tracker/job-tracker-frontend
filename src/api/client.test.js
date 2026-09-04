@@ -5,6 +5,7 @@ import {
   getHealth,
   getApplication,
   getStatusHistory,
+  getStatusTimeline,
   createApplication,
   updateApplication,
   archiveApplication,
@@ -53,6 +54,27 @@ describe("getHealth", () => {
       mockResponse({ ok: false, status: 500, body: { detail: "Down" } })
     );
     await expect(getHealth()).rejects.toThrow("Down");
+  });
+});
+
+describe("getStatusTimeline", () => {
+  it("requests the timeline collection", async () => {
+    await getStatusTimeline();
+    expect(calledUrl()).toBe(`${BASE}/applications/status-timeline`);
+  });
+
+  it("returns the body", async () => {
+    const body = {
+      series: [{ date: "2026-08-01", counts: { applied: 1 } }],
+      opening_count: 1,
+    };
+    global.fetch.mockResolvedValue(mockResponse({ body }));
+    expect(await getStatusTimeline()).toEqual(body);
+  });
+
+  it("surfaces a failure rather than returning nothing", async () => {
+    global.fetch.mockResolvedValue(mockResponse({ ok: false, status: 500 }));
+    await expect(getStatusTimeline()).rejects.toThrow();
   });
 });
 

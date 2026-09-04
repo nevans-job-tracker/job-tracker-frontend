@@ -72,6 +72,19 @@ export async function listSources() {
   return handleResponse(res);
 }
 
+/**
+ * Applications per status per day, for the insights screen (KAN-70).
+ *
+ * Replayed server-side rather than here. Shipping every history row and
+ * reconstructing it in the browser would put the same logic somewhere each
+ * consumer has to re-derive, and would grow the response with the table
+ * rather than with the number of days.
+ */
+export async function getStatusTimeline() {
+  const res = await fetch(`${API_URL}/applications/status-timeline`);
+  return handleResponse(res);
+}
+
 export async function getStatusHistory(id) {
   const res = await fetch(`${API_URL}/applications/${id}/history`);
   return handleResponse(res);

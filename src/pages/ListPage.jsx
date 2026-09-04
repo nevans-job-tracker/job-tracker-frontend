@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   listApplications,
   listSources,
@@ -236,6 +236,11 @@ export default function ListPage() {
           >
             {exporting ? "Exporting..." : "Export CSV"}
           </button>
+          {/* A link rather than a button: it navigates, so middle-click and
+              open-in-new-tab should work by construction (the KAN-60 rule). */}
+          <Link className="back-link" to="/insights">
+            Insights
+          </Link>
           <button onClick={() => navigate("/applications/new")}>
             + Add application
           </button>

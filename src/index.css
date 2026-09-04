@@ -140,6 +140,22 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Wraps for the same reason `header` above does, and it started mattering
+     when Insights made a fourth control (KAN-70): four of them measure 455px
+     against the 402px an iPhone 17 Pro has in portrait, so the last one ran
+     off the right edge.
+
+     The shrink rules are the whole mechanism and are easy to get backwards.
+     This box must be allowed to *narrow* — that is what gives its children a
+     reason to wrap — while the controls inside it must not, or they squeeze
+     into mis-tap-sized targets instead of moving to a second row. That is the
+     same trade the `header` comment above describes, one level down. */
+  flex-shrink: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-actions > * {
   flex-shrink: 0;
 }
 
@@ -847,4 +863,126 @@ textarea {
   border-left-color: var(--danger);
   color: var(--danger);
   font-family: inherit;
+}
+
+/* The status-over-time chart (KAN-70).
+
+   No colours are declared here. Every band takes its fill from the same
+   --badge-*-bg token the badge in the list uses, through the .band-* rules
+   below — which is what makes a band and a badge the same colour, and what
+   makes dark mode work without the chart knowing dark mode exists. */
+.chart {
+  margin: 1rem 0 2rem;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* The viewBox is fixed and the SVG scales to its container, so the whole
+     chart is responsive without a media query. §1 makes the phone real. */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.chart-band {
+  /* A hairline in the surface colour, so adjacent bands of similar weight stay
+     distinguishable where one is only a row or two tall. */
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.chart-total {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  /* The top of the stack *is* the total, so this is emphasis on an edge that
+     is already there rather than a second series that could disagree. */
+  opacity: 0.55;
+}
+
+.chart-legend {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.9rem;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chart-legend-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.chart-note {
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* One rule per status, mirroring the .badge-* block above. `background` covers
+   the legend swatch, `fill` the SVG band — a <path> ignores the first and a
+   <span> the second, so both can be set from one declaration. */
+.band-interested {
+  fill: var(--badge-interested-bg);
+  background: var(--badge-interested-bg);
+}
+.band-applied {
+  fill: var(--badge-applied-bg);
+  background: var(--badge-applied-bg);
+}
+.band-phone_screen {
+  fill: var(--badge-phone-bg);
+  background: var(--badge-phone-bg);
+}
+.band-interview {
+  fill: var(--badge-interview-bg);
+  background: var(--badge-interview-bg);
+}
+.band-offer {
+  fill: var(--badge-offer-bg);
+  background: var(--badge-offer-bg);
+}
+.band-rejected {
+  fill: var(--badge-rejected-bg);
+  background: var(--badge-rejected-bg);
+}
+.band-ghosted {
+  fill: var(--badge-neutral-bg);
+  background: var(--badge-neutral-bg);
+}
+.band-withdrawn {
+  fill: var(--badge-withdrawn-bg);
+  background: var(--badge-withdrawn-bg);
+}
+.band-posting_closed {
+  fill: var(--badge-closed-bg);
+  background: var(--badge-closed-bg);
 }

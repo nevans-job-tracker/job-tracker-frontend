@@ -21,6 +21,9 @@ vi.mock("./api/client.js", () => ({
     contacts: [],
   }),
   getStatusHistory: vi.fn().mockResolvedValue([]),
+  getStatusTimeline: vi
+    .fn()
+    .mockResolvedValue({ series: [], opening_count: 0 }),
   createApplication: vi.fn(),
   updateApplication: vi.fn(),
   deleteApplication: vi.fn(),
@@ -47,6 +50,15 @@ describe("App routing", () => {
     renderAt("/");
     expect(
       await screen.findByRole("heading", { name: /job application tracker/i })
+    ).toBeInTheDocument();
+  });
+
+  it("shows the insights screen on its own route", async () => {
+    // A route rather than a panel on the list: it is linkable and Back leaves
+    // it, and the list stays a worklist. See KAN-70.
+    renderAt("/insights");
+    expect(
+      await screen.findByRole("heading", { name: "Insights" })
     ).toBeInTheDocument();
   });
 

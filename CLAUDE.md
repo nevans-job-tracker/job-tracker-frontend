@@ -29,8 +29,8 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   internal tool).
 - Talks to backend via `VITE_API_URL`.
 - **Routed, multi-screen app** — list (`/`), application detail
-  (`/applications/:id`), and new entry (`/applications/new`), via
-  `react-router-dom`. This *reverses* the original "no routing library,
+  (`/applications/:id`), new entry (`/applications/new`), and insights
+  (`/insights`), via `react-router-dom`. This *reverses* the original "no routing library,
   everything is one page" decision: each application needs its own URL so the
   browser back button works correctly on mobile and so records are bookmarkable.
 - The detail screen *is* the edit form rather than a read view with a separate
@@ -67,6 +67,16 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   the way out. `IMG` is deliberately absent from its allowlist: mammoth inlines
   embedded images as base64 data URIs, so a letterhead logo would turn a 2 KB
   column into 100 KB+ and then sit in every nightly backup.
+- **The insights chart is hand-rolled SVG, and must stay that way** (KAN-70).
+  A charting library is roughly the whole initial bundle again for one screen,
+  and this repo already lazy-loads mammoth specifically to protect that budget.
+  What the screen needs is a polygon per status and a few text labels; the
+  geometry lives in exported pure functions in `StatusChart.jsx` so it is
+  tested directly rather than through the DOM.
+- **`.band-*` mirrors `.badge-*` in `index.css`**, reading the same
+  `--badge-*-bg` tokens. That is what makes a chart band and a list badge the
+  same colour, and it is why the chart needed no dark-mode work of its own. A
+  new status needs a rule in both blocks.
 - **mammoth is loaded with a dynamic `import()`** so Vite code-splits it. It is
   130 KB gzipped — most of the app again — and someone who never uploads a
   `.docx` never fetches a byte. Keep it that way: a static import would put it
@@ -94,5 +104,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 401 tests, 99% statements, 100% functions
+npm test      # 540 tests, 99% statements, 100% functions
 ```
