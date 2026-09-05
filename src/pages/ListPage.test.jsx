@@ -612,8 +612,11 @@ describe("ListPage", () => {
 });
 
 describe("changing a status from the list (KAN-59)", () => {
+  // Read out of the row itself rather than composing the label from cells[0].
+  // That index meant "the company" only for as long as Company led the table,
+  // and KAN-74 put Id in front of it. The row is what this wants anyway.
   const firstStatus = () =>
-    screen.getByLabelText(`Status for ${screen.getAllByRole("row")[1].cells[0].textContent}`);
+    within(screen.getAllByRole("row")[1]).getByLabelText(/^Status for /);
 
   it("saves the change", async () => {
     setup();

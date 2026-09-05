@@ -511,6 +511,38 @@ describe("employment type in the list (KAN-51)", () => {
   });
 });
 
+describe("the Id column (KAN-74)", () => {
+  it("leads the table", () => {
+    setup();
+    expect(headerNames()[0]).toBe("Id");
+  });
+
+  it("shows the record's id", () => {
+    setup();
+    const row = screen.getByText("Northwind").closest("tr");
+    expect(row.cells[headerNames().indexOf("Id")]).toHaveTextContent("1");
+  });
+
+  it("does not sort", async () => {
+    // `created_at` already orders by id — both are assigned on insert — so a
+    // second control for the same order would only need explaining. The
+    // route's sort_by whitelist does not contain `id` either, so a click here
+    // would be asking for something the API rejects.
+    const { onSortChange } = setup();
+    await userEvent.click(screen.getByText("Id"));
+    expect(onSortChange).not.toHaveBeenCalled();
+  });
+
+  it("is text rather than a third link to the record", () => {
+    // Company and Role already lead there (KAN-60) and the id is the href, so
+    // a link would add a target without adding a destination.
+    setup();
+    const row = screen.getByText("Northwind").closest("tr");
+    const cell = row.cells[headerNames().indexOf("Id")];
+    expect(within(cell).queryByRole("link")).toBeNull();
+  });
+});
+
 describe("changing a status from the list (KAN-59)", () => {
   const statusSelect = (company) =>
     screen.getByLabelText(`Status for ${company}`);
@@ -570,8 +602,13 @@ describe("changing a status from the list (KAN-59)", () => {
 
 describe("column order (KAN-64)", () => {
   it("leads with identity, then the two controls", () => {
+    // KAN-74 prepended Id. That does not disturb what this protects: the rule
+    // is identity, then actions, then detail, and an id is identity — the
+    // defect KAN-64 fixed was Link, an action, wedged between Company and
+    // Role. Nothing is wedged here; identity simply starts one column earlier.
     setup();
-    expect(headerNames().slice(0, 4)).toEqual([
+    expect(headerNames().slice(0, 5)).toEqual([
+      "Id",
       "Company",
       "Role",
       "Link",

@@ -129,6 +129,14 @@ export default function ApplicationList({
     <table className="app-table">
       <thead>
         <tr>
+          {/* The one field the list never showed, needed now that tooling
+              outside the app addresses records by id (KAN-74). Not sortable:
+              `created_at` is already a sort key and orders by id, since both
+              are assigned by the server on insert, so a second control would
+              produce the identical order and have to be explained. Adding
+              `id` to the route's sort_by whitelist would widen the API to buy
+              an ordering that already exists. */}
+          <th className="col-wide col-id">Id</th>
           <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}
@@ -200,6 +208,12 @@ export default function ApplicationList({
           // links below carry the affordance, so nothing relies on it to look
           // actionable.
           <tr key={app.id} className="row-hover">
+            {/* Plain text rather than a third way in. Company and Role already
+                link to this same record (KAN-60) and the id is literally the
+                href, so a link here would add a target without adding a
+                destination. Text also means selecting it does not drag-start
+                an anchor, which is what copying an id involves. */}
+            <td className="col-wide col-id">{app.id}</td>
             <td>
               <Link className="record-link" to={`/applications/${app.id}`}>
                 {app.company}
