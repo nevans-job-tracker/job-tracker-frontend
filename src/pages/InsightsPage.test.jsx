@@ -55,6 +55,22 @@ describe("InsightsPage", () => {
     );
   });
 
+  it("puts the way out ahead of the title, as the detail screen does", async () => {
+    renderPage();
+    await screen.findByRole("img");
+
+    // The two screens disagreed about where "back" lives — right here, top
+    // left there. Asserted as document order rather than a class, because what
+    // matters is what a reader meets first.
+    const link = screen.getByRole("link", { name: /All applications/ });
+    const heading = screen.getByRole("heading", { name: "Insights" });
+    expect(link.compareDocumentPosition(heading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    // The toggle keeps the right-hand side, so the link must not sit with it.
+    expect(link.closest(".header-actions")).toBeNull();
+  });
+
   it("shows an empty state rather than empty axes", async () => {
     api.getStatusTimeline.mockResolvedValue({ series: [], opening_count: 0 });
     const { container } = renderPage();

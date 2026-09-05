@@ -45,14 +45,21 @@ export default function InsightsPage() {
   return (
     <>
       <header>
-        <h1>Insights</h1>
-        <div className="header-actions">
-          <ThemeToggle />
+        {/* The same shape as the detail screen: the way out sits top left with
+            the title beneath it, and the header's right side is for controls.
+            This screen had the link on the right, so the two disagreed about
+            where "back" lives — and a reader arrives here from the list, so
+            this is the one that should match. */}
+        <div>
           {/* A plain link rather than history.back(): this screen is
               bookmarkable, so there is not always a list to go back to. */}
           <Link className="back-link" to="/">
             ← All applications
           </Link>
+          <h1>Insights</h1>
+        </div>
+        <div className="header-actions">
+          <ThemeToggle />
         </div>
       </header>
 
