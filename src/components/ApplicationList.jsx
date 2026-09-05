@@ -130,13 +130,18 @@ export default function ApplicationList({
       <thead>
         <tr>
           {/* The one field the list never showed, needed now that tooling
-              outside the app addresses records by id (KAN-74). Not sortable:
-              `created_at` is already a sort key and orders by id, since both
-              are assigned by the server on insert, so a second control would
-              produce the identical order and have to be explained. Adding
-              `id` to the route's sort_by whitelist would widen the API to buy
-              an ordering that already exists. */}
-          <th className="col-wide col-id">Id</th>
+              outside the app addresses records by id (KAN-74).
+
+              It sorts, although `created_at` already produces that order —
+              both are assigned by the server on insert. The redundancy is
+              deliberate: every neighbouring header is clickable, and one that
+              is not reads as broken rather than as a decision. Consistency
+              across the header row is worth more than avoiding a second route
+              to one ordering. `id` was added to the route's sort_by whitelist
+              for this. */}
+          <th className="col-wide col-id" onClick={() => headerClick("id")}>
+            Id{arrow("id")}
+          </th>
           <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}

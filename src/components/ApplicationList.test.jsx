@@ -523,14 +523,14 @@ describe("the Id column (KAN-74)", () => {
     expect(row.cells[headerNames().indexOf("Id")]).toHaveTextContent("1");
   });
 
-  it("does not sort", async () => {
-    // `created_at` already orders by id — both are assigned on insert — so a
-    // second control for the same order would only need explaining. The
-    // route's sort_by whitelist does not contain `id` either, so a click here
-    // would be asking for something the API rejects.
+  it("sorts, like every other header", async () => {
+    // `created_at` already produces this order, so the key is redundant. It is
+    // here because a single unclickable header in a row of clickable ones
+    // reads as broken. `id` is in the route's sort_by whitelist for this.
     const { onSortChange } = setup();
-    await userEvent.click(screen.getByText("Id"));
-    expect(onSortChange).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText(/^Id/));
+    // A column that is not the current sort starts ascending, as elsewhere.
+    expect(onSortChange).toHaveBeenCalledWith("id", "asc");
   });
 
   it("is text rather than a third link to the record", () => {

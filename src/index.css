@@ -403,13 +403,13 @@ textarea {
   white-space: nowrap;
 }
 
-/* KAN-74: an id is three or four digits, so it needs one column's width. The
-   cursor is reset for the same reason .col-link resets it — `.app-table th` is
-   pointer for every sortable header, and this one does not sort. */
+/* KAN-74: an id is three or four digits, so it needs one column's width — plus
+   room for the sort arrow, which is what the nowrap protects. No cursor reset
+   here, unlike .col-link below: this header sorts, so the pointer that
+   `.app-table th` sets is telling the truth. */
 .app-table .col-id {
   width: 1%;
   white-space: nowrap;
-  cursor: default;
 }
 
 /* KAN-45: the link column is an icon, so it needs no more width than one. */
