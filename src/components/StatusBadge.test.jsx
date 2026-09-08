@@ -34,6 +34,24 @@ describe("the posting-closed badge (KAN-57)", () => {
   });
 });
 
+describe("the scam badge (KAN-79)", () => {
+  it("renders its readable label", () => {
+    render(<StatusBadge status="scam" />);
+    expect(screen.getByText("Scam")).toBeInTheDocument();
+  });
+
+  it("does not wear rejected's red or posting_closed's grey", () => {
+    // The two nearest statuses are the two wrong facts. `rejected` says an
+    // employer considered you; `posting_closed` says a real opportunity ended.
+    // A scam is neither, and the colour is what carries that at a glance.
+    render(<StatusBadge status="scam" />);
+    const badge = screen.getByText("Scam");
+    expect(badge).toHaveClass("badge-scam");
+    expect(badge).not.toHaveClass("badge-rejected");
+    expect(badge).not.toHaveClass("badge-posting_closed");
+  });
+});
+
 describe("every status has a label and a badge class", () => {
   // index.css defines one rule per status. A value added to the enum and to
   // STATUS_LABELS but not to the stylesheet renders unstyled, which is easy

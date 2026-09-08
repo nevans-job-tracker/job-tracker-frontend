@@ -38,6 +38,11 @@ export const STATUS_LABELS = {
   // they went quiet (ghosted), circumstance (posting closed), you decided
   // (withdrawn). The database appends this one — see the KAN-57 revision.
   posting_closed: "Posting Closed",
+  // Beside posting_closed because both describe the *posting* rather than the
+  // application — but they are opposite claims, and that is why it is its own
+  // status: posting_closed says a real opportunity ended, scam says there was
+  // never one to end (KAN-79).
+  scam: "Scam",
   withdrawn: "Withdrawn",
 };
 

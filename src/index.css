@@ -52,6 +52,23 @@
      the warm grey `ghosted` wears, which is a different kind of nothing. */
   --badge-closed-bg: #e2e8f0;
   --badge-closed-fg: #334155;
+  /* The one badge that is a solid rather than a tint, and deliberately so
+     (KAN-79).
+
+     A pale rose was tried first and failed the only test that matters: beside
+     `rejected` it read as another pale wash, and mistaking a scam for a
+     rejection is precisely the confusion this status exists to prevent. The
+     palette has no free hue left — red is rejected, the warm range is phone
+     screen and interview, purple is withdrawn — so the thing that separates
+     it is weight, not hue.
+
+     That is also the honest signal. Every other status describes an ordinary
+     outcome of a real process; this one says the posting was fraudulent, so
+     being the odd one out is the point rather than a compromise. Same pair in
+     both themes: it is mid-dark, so it neither glares on the dark page nor
+     disappears on the light one. */
+  --badge-scam-bg: #9f1239;
+  --badge-scam-fg: #ffe4e6;
 }
 
 /* The badges are not inverted mechanically. Flipping a light tint to its dark
@@ -101,6 +118,9 @@
   --badge-withdrawn-fg: #ddd6fe;
   --badge-closed-bg: #2b3648;
   --badge-closed-fg: #cbd5e1;
+  /* Unchanged from the light palette on purpose — see the note there. */
+  --badge-scam-bg: #9f1239;
+  --badge-scam-fg: #ffe4e6;
 }
 
 * {
@@ -868,6 +888,10 @@ textarea {
   background: var(--badge-closed-bg);
   color: var(--badge-closed-fg);
 }
+.badge-scam {
+  background: var(--badge-scam-bg);
+  color: var(--badge-scam-fg);
+}
 
 /* KAN-63. Deliberately unmissable rather than tasteful: it appears only when
    something is worth knowing — a build that is not `main`, or a frontend and
@@ -1009,6 +1033,10 @@ textarea {
 .band-posting_closed {
   fill: var(--badge-closed-bg);
   background: var(--badge-closed-bg);
+}
+.band-scam {
+  fill: var(--badge-scam-bg);
+  background: var(--badge-scam-bg);
 }
 
 /* Two sort targets in one header (KAN-72). The Pay cell shows a range, so

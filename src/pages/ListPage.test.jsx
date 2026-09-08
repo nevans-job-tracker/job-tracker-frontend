@@ -454,6 +454,11 @@ describe("ListPage", () => {
       expect(groupOf("Offer")).toBe("Active");
       expect(groupOf("Rejected")).toBe("Inactive");
       expect(groupOf("Posting Closed")).toBe("Inactive");
+      // Asserted rather than assumed (KAN-79). INACTIVE_STATUSES is computed
+      // as the complement of ACTIVE_STATUSES, so this lands in the right group
+      // for free — which is exactly why it is worth pinning: a change to that
+      // derivation would otherwise move it silently.
+      expect(groupOf("Scam")).toBe("Inactive");
       // The set options are not inside either group; they are the choice the
       // groups explain.
       expect(groupOf("Active Statuses")).toBeUndefined();
