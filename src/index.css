@@ -386,13 +386,41 @@ textarea {
   margin: 8px 0;
 }
 
+/* The table scrolls, the page does not (KAN-80).
+ 
+   Without this the table had no scroll container at all, so its overflow
+   reached the document: the *page* grew a horizontal scrollbar and the
+   header, filters and result count slid sideways with it.
+ 
+   It also fixes the asymmetric gutters, which look like a separate bug and
+   are the same one. A block container does not extend its padding to
+   overflowing content, so `.container`'s left 16px was honoured — the table
+   starts inside the padding box — while the right 16px was not, because the
+   table escaped it. Confining the overflow to a scroll container puts the
+   table back inside the padding box at both ends.
+ 
+   Consequence worth knowing: `.container` is capped at 1100px, and the table
+   needs 1174px for its twelve columns, so it scrolls here even on a wide
+   screen where the viewport had room. That is deliberate rather than
+   overlooked — widening the container would widen the detail form with it,
+   since App.jsx wraps every route in the same element. Whether this screen
+   should be wider is its own decision. */
+.table-scroll {
+  overflow-x: auto;
+  /* The card treatment moves up here with the clipping. `overflow: hidden`
+     on the table was what rounded the header row's corners; the scroll
+     container clips now, so the radius has to live where the clipping is. */
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
 .app-table {
+  /* Resolves to the wrapper's width, then loses to min-content when the
+     columns need more — which is exactly when the wrapper should scroll. */
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .app-table th,

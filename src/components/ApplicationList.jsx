@@ -126,183 +126,188 @@ export default function ApplicationList({
   }
 
   return (
-    <table className="app-table">
-      <thead>
-        <tr>
-          {/* The one field the list never showed, needed now that tooling
-              outside the app addresses records by id (KAN-74).
+    // The scroll container is the fix for KAN-80 and has to stay: without
+    // it the table's overflow reaches the document, so the whole page
+    // scrolls sideways and `.container`'s right padding is lost.
+    <div className="table-scroll">
+      <table className="app-table">
+        <thead>
+          <tr>
+            {/* The one field the list never showed, needed now that tooling
+                outside the app addresses records by id (KAN-74).
 
-              It sorts, although `created_at` already produces that order —
-              both are assigned by the server on insert. The redundancy is
-              deliberate: every neighbouring header is clickable, and one that
-              is not reads as broken rather than as a decision. Consistency
-              across the header row is worth more than avoiding a second route
-              to one ordering. `id` was added to the route's sort_by whitelist
-              for this. */}
-          <th className="col-wide col-id" onClick={() => headerClick("id")}>
-            Id{arrow("id")}
-          </th>
-          <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
-          <th className="col-wide" onClick={() => headerClick("role_title")}>
-            Role{arrow("role_title")}
-          </th>
-          <th className="col-wide col-link">Link</th>
-          <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
-          {/* Location was dropped here (KAN-51) to make room: the search is
-              effectively all-remote, so the column said "Remote" on nearly
-              every row. It is still stored, still searchable, and still on
-              the detail screen. */}
-          <th className="col-wide" onClick={() => headerClick("employment_type")}>
-            Type{arrow("employment_type")}
-          </th>
-          <th className="col-wide" onClick={() => headerClick("source")}>
-            Source{arrow("source")}
-          </th>
-          <th
-            className="col-wide"
-            onClick={() => headerClick("years_experience_min")}
-          >
-            Experience{arrow("years_experience_min")}
-          </th>
-          {/* "Pay" rather than "Salary": the column now holds an annual
-              figure or an hourly rate (KAN-50). The database columns keep
-              their salary_* names — see the story for why.
+                It sorts, although `created_at` already produces that order —
+                both are assigned by the server on insert. The redundancy is
+                deliberate: every neighbouring header is clickable, and one that
+                is not reads as broken rather than as a decision. Consistency
+                across the header row is worth more than avoiding a second route
+                to one ordering. `id` was added to the route's sort_by whitelist
+                for this. */}
+            <th className="col-wide col-id" onClick={() => headerClick("id")}>
+              Id{arrow("id")}
+            </th>
+            <th onClick={() => headerClick("company")}>Company{arrow("company")}</th>
+            <th className="col-wide" onClick={() => headerClick("role_title")}>
+              Role{arrow("role_title")}
+            </th>
+            <th className="col-wide col-link">Link</th>
+            <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
+            {/* Location was dropped here (KAN-51) to make room: the search is
+                effectively all-remote, so the column said "Remote" on nearly
+                every row. It is still stored, still searchable, and still on
+                the detail screen. */}
+            <th className="col-wide" onClick={() => headerClick("employment_type")}>
+              Type{arrow("employment_type")}
+            </th>
+            <th className="col-wide" onClick={() => headerClick("source")}>
+              Source{arrow("source")}
+            </th>
+            <th
+              className="col-wide"
+              onClick={() => headerClick("years_experience_min")}
+            >
+              Experience{arrow("years_experience_min")}
+            </th>
+            {/* "Pay" rather than "Salary": the column now holds an annual
+                figure or an hourly rate (KAN-50). The database columns keep
+                their salary_* names — see the story for why.
 
-              Two sort keys in one column (KAN-72), because the cell shows a
-              range and either end is a reasonable thing to order by: min
-              answers "what does this start at", max answers "how high could
-              this go". Rendered as two small targets rather than a cycling
-              header — every other column here is a two-state toggle, and
-              making one of them a four-state cycle would be undiscoverable
-              and inconsistent with the rest of the row. */}
-          <th className="col-wide col-pay">
-            <span className="pay-head-label">Pay</span>
-            <span className="pay-head-keys">
-              <button
-                type="button"
-                className={sortBy === "salary_min" ? "pay-key is-active" : "pay-key"}
-                onClick={() => headerClick("salary_min")}
-              >
-                min{arrow("salary_min")}
-              </button>
-              <button
-                type="button"
-                className={sortBy === "salary_max" ? "pay-key is-active" : "pay-key"}
-                onClick={() => headerClick("salary_max")}
-              >
-                max{arrow("salary_max")}
-              </button>
-            </span>
-          </th>
-          <th onClick={() => headerClick("next_action_date")}>
-            Next action{arrow("next_action_date")}
-          </th>
-          <th className="col-wide" onClick={() => headerClick("created_at")}>
-            Added{arrow("created_at")}
-          </th>
-          <th onClick={() => headerClick("date_applied")}>
-            Applied{arrow("date_applied")}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {applications.map((app) => (
-          // The hover highlight stays although the row is no longer
-          // clickable. At ten columns it is what lets the eye track across a
-          // row, which is a reading aid independent of clicking — and the
-          // links below carry the affordance, so nothing relies on it to look
-          // actionable.
-          <tr key={app.id} className="row-hover">
-            {/* Plain text rather than a third way in. Company and Role already
-                link to this same record (KAN-60) and the id is literally the
-                href, so a link here would add a target without adding a
-                destination. Text also means selecting it does not drag-start
-                an anchor, which is what copying an id involves. */}
-            <td className="col-wide col-id">{app.id}</td>
-            <td>
-              <Link className="record-link" to={`/applications/${app.id}`}>
-                {app.company}
-              </Link>
-            </td>
-            {/* The second way in, and the one KAN-60 was asked for. Company
-                carries it too because this column does not exist below 900px
-                — Role alone would leave a phone with no way to open a
-                record. */}
-            <td className="col-wide">
-              <Link className="record-link" to={`/applications/${app.id}`}>
-                {app.role_title}
-              </Link>
-            </td>
-            <td className="col-wide col-link">
-              {isOpenableLink(app.job_link) ? (
-                <a
-                  href={app.job_link}
-                  target="_blank"
-                  // noopener: without it the opened page gets a handle on
-                  // window.opener and can navigate this tab elsewhere.
-                  rel="noopener noreferrer"
-                  className="link-out"
-                  // The glyph is identical on every row, so the company is
-                  // what makes one link distinguishable from another.
-                  aria-label={`Open the posting for ${app.company} in a new tab`}
+                Two sort keys in one column (KAN-72), because the cell shows a
+                range and either end is a reasonable thing to order by: min
+                answers "what does this start at", max answers "how high could
+                this go". Rendered as two small targets rather than a cycling
+                header — every other column here is a two-state toggle, and
+                making one of them a four-state cycle would be undiscoverable
+                and inconsistent with the rest of the row. */}
+            <th className="col-wide col-pay">
+              <span className="pay-head-label">Pay</span>
+              <span className="pay-head-keys">
+                <button
+                  type="button"
+                  className={sortBy === "salary_min" ? "pay-key is-active" : "pay-key"}
+                  onClick={() => headerClick("salary_min")}
                 >
-                  ↗
-                </a>
-              ) : (
-                "—"
-              )}
-            </td>
-            {/* The only cell whose *content* is responsive rather than its
-                presence. A dropdown here is a mis-tap hazard on touch, and
-                unlike KAN-45's link a mis-tap changes data — so the phone
-                keeps the badge and the desktop gets the control. See KAN-59. */}
-            <td className="col-status">
-              <span className="col-narrow">
-                <StatusBadge status={app.status} />
+                  min{arrow("salary_min")}
+                </button>
+                <button
+                  type="button"
+                  className={sortBy === "salary_max" ? "pay-key is-active" : "pay-key"}
+                  onClick={() => headerClick("salary_max")}
+                >
+                  max{arrow("salary_max")}
+                </button>
               </span>
-              <select
-                className={`col-wide status-select badge-${app.status}`}
-                aria-label={`Status for ${app.company}`}
-                value={app.status}
-                onChange={(e) => onStatusChange?.(app, e.target.value)}
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </td>
-            <td className="col-wide">
-              {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
-            </td>
-            <td className="col-wide">{app.source || "—"}</td>
-            <td className="col-wide">
-              {formatExperience(app.years_experience_min)}
-            </td>
-            <td className="col-wide col-salary">{formatSalary(app)}</td>
-            <td>
-              {app.next_action ? (
-                <>
-                  {app.next_action}
-                  {app.next_action_date && (
-                    <span className="cell-sub">{app.next_action_date}</span>
-                  )}
-                </>
-              ) : (
-                "—"
-              )}
-            </td>
-            {/* The exact timestamp is one hover away; the column itself
-                answers "how old is this". col-wide, so hover is always
-                available where the column is. */}
-            <td className="col-wide col-date" title={app.created_at || undefined}>
-              {formatAge(app.created_at)}
-            </td>
-            <td className="col-date">{app.date_applied || "—"}</td>
+            </th>
+            <th onClick={() => headerClick("next_action_date")}>
+              Next action{arrow("next_action_date")}
+            </th>
+            <th className="col-wide" onClick={() => headerClick("created_at")}>
+              Added{arrow("created_at")}
+            </th>
+            <th onClick={() => headerClick("date_applied")}>
+              Applied{arrow("date_applied")}
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {applications.map((app) => (
+            // The hover highlight stays although the row is no longer
+            // clickable. At ten columns it is what lets the eye track across a
+            // row, which is a reading aid independent of clicking — and the
+            // links below carry the affordance, so nothing relies on it to look
+            // actionable.
+            <tr key={app.id} className="row-hover">
+              {/* Plain text rather than a third way in. Company and Role already
+                  link to this same record (KAN-60) and the id is literally the
+                  href, so a link here would add a target without adding a
+                  destination. Text also means selecting it does not drag-start
+                  an anchor, which is what copying an id involves. */}
+              <td className="col-wide col-id">{app.id}</td>
+              <td>
+                <Link className="record-link" to={`/applications/${app.id}`}>
+                  {app.company}
+                </Link>
+              </td>
+              {/* The second way in, and the one KAN-60 was asked for. Company
+                  carries it too because this column does not exist below 900px
+                  — Role alone would leave a phone with no way to open a
+                  record. */}
+              <td className="col-wide">
+                <Link className="record-link" to={`/applications/${app.id}`}>
+                  {app.role_title}
+                </Link>
+              </td>
+              <td className="col-wide col-link">
+                {isOpenableLink(app.job_link) ? (
+                  <a
+                    href={app.job_link}
+                    target="_blank"
+                    // noopener: without it the opened page gets a handle on
+                    // window.opener and can navigate this tab elsewhere.
+                    rel="noopener noreferrer"
+                    className="link-out"
+                    // The glyph is identical on every row, so the company is
+                    // what makes one link distinguishable from another.
+                    aria-label={`Open the posting for ${app.company} in a new tab`}
+                  >
+                    ↗
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </td>
+              {/* The only cell whose *content* is responsive rather than its
+                  presence. A dropdown here is a mis-tap hazard on touch, and
+                  unlike KAN-45's link a mis-tap changes data — so the phone
+                  keeps the badge and the desktop gets the control. See KAN-59. */}
+              <td className="col-status">
+                <span className="col-narrow">
+                  <StatusBadge status={app.status} />
+                </span>
+                <select
+                  className={`col-wide status-select badge-${app.status}`}
+                  aria-label={`Status for ${app.company}`}
+                  value={app.status}
+                  onChange={(e) => onStatusChange?.(app, e.target.value)}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td className="col-wide">
+                {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
+              </td>
+              <td className="col-wide">{app.source || "—"}</td>
+              <td className="col-wide">
+                {formatExperience(app.years_experience_min)}
+              </td>
+              <td className="col-wide col-salary">{formatSalary(app)}</td>
+              <td>
+                {app.next_action ? (
+                  <>
+                    {app.next_action}
+                    {app.next_action_date && (
+                      <span className="cell-sub">{app.next_action_date}</span>
+                    )}
+                  </>
+                ) : (
+                  "—"
+                )}
+              </td>
+              {/* The exact timestamp is one hover away; the column itself
+                  answers "how old is this". col-wide, so hover is always
+                  available where the column is. */}
+              <td className="col-wide col-date" title={app.created_at || undefined}>
+                {formatAge(app.created_at)}
+              </td>
+              <td className="col-date">{app.date_applied || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
