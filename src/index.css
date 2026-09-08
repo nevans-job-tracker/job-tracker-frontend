@@ -141,6 +141,53 @@ body {
   padding: 24px 16px 64px;
 }
 
+/* The list only (KAN-80). Three rules, in priority order:
+ 
+   **The table never scrolls itself.** A scrollbar inside the table hides
+   columns while the window has room for them, and the row you are reading
+   stops lining up with the header you are reading it under.
+ 
+   **The side padding yields before the table does.** It is breathing room,
+   not structure, so it collapses as the window narrows — reaching zero just
+   as the table starts to need the space. This is also what keeps the gutters
+   symmetric: the asymmetry in the original report happened because a block
+   container cannot extend padding to overflowing content, so once there is no
+   padding left there is nothing to be lopsided about.
+ 
+   **Then, and only then, the page scrolls.** A window genuinely narrower than
+   the table has to overflow somewhere, and the page is the honest place —
+   everything stays aligned and nothing is hidden inside a box.
+ 
+   No max-width, so the table uses the window it is given. 1100px is a reading
+   width chosen for the detail form; a table is not prose. */
+.container-wide {
+  max-width: none;
+}
+
+/* Only above the breakpoint. Below it `col-wide` hides eight of the twelve
+   columns and the remaining four fit easily, so the padding is doing its
+   ordinary job and must not collapse — a phone would otherwise render the
+   table hard against both screen edges.
+ 
+   The 1180px is the table's min-content plus a little: padding shrinks from
+   16px to 0 across the last ~30px before the table needs that space. It is
+   the one number here that drifts with the columns; too low and a sliver of
+   asymmetric padding returns, too high and the padding disappears earlier
+   than it needs to.
+
+   `100%` rather than `100vw`, and that is not interchangeable here. `100vw`
+   includes the vertical scrollbar, so at the moment the padding is closing it
+   overstates the space available by the scrollbar's width — measured, that
+   left 10px of padding where 2.5px fitted, and put the table 10px past the
+   right edge with 10px still on the left. Exactly the asymmetry this is meant
+   to remove, reintroduced by the unit. `100%` resolves against the content
+   width, which is what the table actually has to fit in. */
+@media (min-width: 900px) {
+  .container-wide {
+    padding-inline: clamp(0px, calc((100% - 1180px) / 2), 16px);
+  }
+}
+
 header {
   display: flex;
   justify-content: space-between;
@@ -386,41 +433,13 @@ textarea {
   margin: 8px 0;
 }
 
-/* The table scrolls, the page does not (KAN-80).
- 
-   Without this the table had no scroll container at all, so its overflow
-   reached the document: the *page* grew a horizontal scrollbar and the
-   header, filters and result count slid sideways with it.
- 
-   It also fixes the asymmetric gutters, which look like a separate bug and
-   are the same one. A block container does not extend its padding to
-   overflowing content, so `.container`'s left 16px was honoured — the table
-   starts inside the padding box — while the right 16px was not, because the
-   table escaped it. Confining the overflow to a scroll container puts the
-   table back inside the padding box at both ends.
- 
-   Consequence worth knowing: `.container` is capped at 1100px, and the table
-   needs 1174px for its twelve columns, so it scrolls here even on a wide
-   screen where the viewport had room. That is deliberate rather than
-   overlooked — widening the container would widen the detail form with it,
-   since App.jsx wraps every route in the same element. Whether this screen
-   should be wider is its own decision. */
-.table-scroll {
-  overflow-x: auto;
-  /* The card treatment moves up here with the clipping. `overflow: hidden`
-     on the table was what rounded the header row's corners; the scroll
-     container clips now, so the radius has to live where the clipping is. */
-  background: var(--surface);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px var(--shadow);
-}
-
 .app-table {
-  /* Resolves to the wrapper's width, then loses to min-content when the
-     columns need more — which is exactly when the wrapper should scroll. */
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .app-table th,

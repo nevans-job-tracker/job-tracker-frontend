@@ -53,6 +53,33 @@ describe("App routing", () => {
     ).toBeInTheDocument();
   });
 
+  it("gives the list a wider container than the form screens", async () => {
+    // 1100px is a reading width chosen for the detail form. The table needs
+    // 1175px for its twelve columns, so that cap squeezed it into a scroll on
+    // a monitor with room to spare (KAN-80). Widening `.container` outright
+    // would have dragged the form out with it, this element wrapping every
+    // route — so the width is chosen per route.
+    const { container } = renderAt("/");
+    await screen.findByRole("heading", { name: /job application tracker/i });
+    expect(container.querySelector(".container")).toHaveClass("container-wide");
+  });
+
+  it("does not widen the detail screen", async () => {
+    const { container } = renderAt("/applications/7");
+    await screen.findByDisplayValue("Northwind");
+    expect(container.querySelector(".container")).not.toHaveClass(
+      "container-wide"
+    );
+  });
+
+  it("does not widen the insights screen", async () => {
+    const { container } = renderAt("/insights");
+    await screen.findByRole("heading", { name: "Insights" });
+    expect(container.querySelector(".container")).not.toHaveClass(
+      "container-wide"
+    );
+  });
+
   it("shows the insights screen on its own route", async () => {
     // A route rather than a panel on the list: it is linkable and Back leaves
     // it, and the list stays a worklist. See KAN-70.

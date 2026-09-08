@@ -436,32 +436,6 @@ describe("pay display (KAN-50)", () => {
   });
 });
 
-describe("the table's overflow is contained (KAN-80)", () => {
-  it("sits inside a scroll container", () => {
-    // jsdom does not lay out, so it cannot see the bug this guards — the
-    // table overflowing to the *document*, which put a horizontal scrollbar
-    // on the page and slid the header and filters sideways with it. What can
-    // be asserted is the structure that confines the overflow, which is the
-    // thing a later refactor would remove without noticing.
-    //
-    // The gutters are the same defect: `.container`'s right padding was lost
-    // because a block container does not extend padding to overflowing
-    // content. Measuring that needs a real viewport (§5).
-    const { container } = setup();
-    const table = container.querySelector(".app-table");
-    expect(table.closest(".table-scroll")).not.toBeNull();
-  });
-
-  it("keeps the card treatment on the element that clips", () => {
-    // The rounded corners came from `overflow: hidden` on the table. The
-    // scroll container clips now, so the radius has to move with it or the
-    // header row's corners go square.
-    const { container } = setup();
-    expect(container.querySelector(".table-scroll")).toBeInTheDocument();
-    expect(container.querySelector(".app-table")).toBeInTheDocument();
-  });
-});
-
 describe("sorting by pay (KAN-72)", () => {
   it("offers min and max as separate targets", () => {
     setup();
