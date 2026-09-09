@@ -169,23 +169,27 @@ body {
    ordinary job and must not collapse — a phone would otherwise render the
    table hard against both screen edges.
  
-   The 1180px is the table's min-content plus a little: padding shrinks from
-   16px to 0 across the last ~30px before the table needs that space. It is
-   the one number here that drifts with the columns; too low and a sliver of
-   asymmetric padding returns, too high and the padding disappears earlier
-   than it needs to.
+   **1280px, and it must stay above the table's min-content.** Measured on the
+   deployed data that is 1185px, and the first attempt used 1180 — just below
+   it, which left 2.5px of padding at the moment the table ran out of room and
+   put it 3px past the right edge with 3px still on the left. A three-pixel
+   version of the exact defect this exists to remove.
 
-   `100%` rather than `100vw`, and that is not interchangeable here. `100vw`
-   includes the vertical scrollbar, so at the moment the padding is closing it
+   So the two directions to be wrong in are not equal. Too low reintroduces
+   the asymmetry; too high only means the padding disappears a little earlier
+   than it strictly had to, which is what the rule asks for anyway. Err high.
+   The headroom also absorbs the next column before this number has to move.
+
+   `100%` rather than `100vw`, and they are not interchangeable. `100vw`
+   includes the vertical scrollbar, so while the padding is closing it
    overstates the space available by the scrollbar's width — measured, that
-   left 10px of padding where 2.5px fitted, and put the table 10px past the
-   right edge with 10px still on the left. Exactly the asymmetry this is meant
-   to remove, reintroduced by the unit. `100%` resolves against the content
-   width, which is what the table actually has to fit in. */
+   left 10px of padding where 2.5px fitted. `100%` resolves against the
+   content width, which is what the table actually has to fit in. */
 @media (min-width: 900px) {
   .container-wide {
-    padding-inline: clamp(0px, calc((100% - 1180px) / 2), 16px);
+    padding-inline: clamp(0px, calc((100% - 1280px) / 2), 16px);
   }
+}
 }
 
 header {
