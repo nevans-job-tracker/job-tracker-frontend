@@ -31,6 +31,10 @@
 
   --shadow: rgba(0, 0, 0, 0.08);
 
+  /* A filled star's conventional colour, distinct from every --badge-* hue
+     already spoken for elsewhere on this row. */
+  --favorite: #d4a017;
+
   --badge-neutral-bg: #e5e7eb;
   --badge-neutral-fg: #4b5563;
   --badge-interested-bg: #cffafe;
@@ -99,6 +103,10 @@
   --field: #12151c;
 
   --shadow: rgba(0, 0, 0, 0.5);
+
+  /* Slightly brighter than the light value so it still reads as gold against
+     a dark surface rather than dulling toward brown. */
+  --favorite: #eab308;
 
   --badge-neutral-bg: #2a2f3a;
   --badge-neutral-fg: #cbd5e1;
@@ -475,54 +483,56 @@ textarea {
 
 /* KAN-74: an id is three or four digits, so it needs one column's width — plus
    room for the sort arrow, which is what the nowrap protects. No cursor reset
-   here, unlike .col-link below: this header sorts, so the pointer that
+   here, unlike .col-favorite below: this header sorts, so the pointer that
    `.app-table th` sets is telling the truth. */
 .app-table .col-id {
   width: 1%;
   white-space: nowrap;
 }
 
-/* KAN-45: the link column is an icon, so it needs no more width than one. */
-.app-table .col-link {
+/* KAN-81: the star is a glyph, so the column needs no more width than one —
+   the same reasoning the old Link column carried under KAN-45. */
+.app-table .col-favorite {
   width: 1%;
   white-space: nowrap;
   text-align: center;
   cursor: default;
 }
 
-/* Sized as a target rather than as a glyph (KAN-73). It was a 1rem arrow with
-   2px of padding — roughly 20x16 — sitting in a row two or three times that
-   tall, so most of the cell looked clickable and was not, and hitting it with
-   a cursor took aim.
-
-   36px is the figure KAN-58 established for the back link, and it is the
-   minimum a finger needs; a cursor wants less, but there is no reason for two
-   numbers. It fills the cell, so the whole area under the column reacts. */
-.link-out {
+/* Sized as a target rather than as a glyph, the same figure KAN-73 set for
+   the posting link it replaces: 36px is what KAN-58 established for the back
+   link, and there is no reason for a second number. It fills the cell, so the
+   whole area under the column reacts, and the negative margin pulls the row's
+   own padding inside the target instead of leaving it as dead space — without
+   it every row would grow to accommodate a control that already fitted. */
+.favorite-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 36px;
   min-height: 36px;
-  /* Pulls the row's own vertical padding inside the target instead of leaving
-     it as dead space around one. Without this the cell grows and every row
-     gets taller to accommodate a control that was already fitting. */
   margin: -8px auto;
+  border: none;
   border-radius: 4px;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 1.1rem;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
   line-height: 1;
+  cursor: pointer;
 }
 
-.link-out:hover {
+.favorite-toggle:hover {
   background: var(--field);
-  text-decoration: none;
 }
 
-.link-out:focus-visible {
+.favorite-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Starred rows read at a glance rather than only on hover. */
+.favorite-toggle.is-favorite {
+  color: var(--favorite);
 }
 
 .load-more {

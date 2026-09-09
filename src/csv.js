@@ -54,6 +54,7 @@ const APPLICATION_COLUMNS = [
   // Prose, not markup — a cell full of <p> tags is noise in a spreadsheet.
   ["Cover letter", (a) => htmlToText(a.cover_letter)],
   ["Archived at", (a) => datetime(a.archived_at)],
+  ["Favorite", (a) => (a.is_favorite ? "Yes" : "No")],
   ["Created at", (a) => datetime(a.created_at)],
   ["Updated at", (a) => datetime(a.updated_at)],
 ];

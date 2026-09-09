@@ -112,15 +112,23 @@ describe("ApplicationList", () => {
     expect(within(row).queryByRole("link", { name: "2026-03-01" })).toBeNull();
   });
 
-  it("has no per-row action buttons — actions moved to the detail screen", () => {
+  it("has no per-row action buttons beyond favoriting — actions moved to the detail screen", () => {
     const { container } = setup();
     // Scoped to the body since KAN-72: the Pay header carries two sort
     // buttons. The rule §4.2 states is about *rows* — a per-row control is a
     // mis-tap hazard on touch — and a header control is not one of those, so
     // an unscoped "no buttons anywhere" query was asserting more than the
     // rule says and would have blocked this for the wrong reason.
+    //
+    // The favorite toggle (KAN-81) is the one deliberate per-row button, and
+    // it earns the exemption §4.2 draws for the reason KAN-45's link did: a
+    // mis-tap costs one tap to undo and writes no history, unlike the status
+    // control the rule is actually protecting against.
     const body = container.querySelector("tbody");
-    expect(within(body).queryByRole("button")).not.toBeInTheDocument();
+    const buttons = within(body).getAllByRole("button");
+    expect(buttons.every((b) => b.classList.contains("favorite-toggle"))).toBe(
+      true
+    );
   });
 
   describe("sorting", () => {
@@ -155,6 +163,7 @@ describe("ApplicationList", () => {
     it.each([
       ["Company", "company"],
       ["Role", "role_title"],
+      ["Favorite", "is_favorite"],
       ["Type", "employment_type"],
       ["Source", "source"],
       ["Status", "status"],
@@ -175,7 +184,7 @@ describe("ApplicationList", () => {
     // Which columns survive on a phone. The CSS hides .col-wide below 900px;
     // this asserts the right cells carry the class.
     const alwaysVisible = ["Company", "Status", "Next action", "Applied"];
-    const wideOnly = ["Role", "Type", "Source", "Experience", "Link", "Pay"];
+    const wideOnly = ["Role", "Type", "Source", "Experience", "Favorite", "Pay"];
 
     // Queried as column headers rather than by text: "Applied" is also a status
     // badge value, so a plain text query matches a body cell too.
@@ -283,7 +292,7 @@ describe("ApplicationList", () => {
   });
 });
 
-describe("the job posting link (KAN-45)", () => {
+describe("the job posting link, now on Source (KAN-81)", () => {
   const link = () =>
     screen.getByRole("link", {
       name: "Open the posting for Northwind in a new tab",
@@ -301,7 +310,14 @@ describe("the job posting link (KAN-45)", () => {
     expect(link()).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 
-  it("names the company, since the glyph is the same on every row", () => {
+  it("shows the source as the link text", () => {
+    setup();
+    expect(link()).toHaveTextContent("LinkedIn");
+  });
+
+  it("names the company, since the visible text repeats across most rows", () => {
+    // "LinkedIn" is the link text on most rows, so the accessible name still
+    // has to say what the link does and for which application.
     setup();
     expect(
       screen.queryByRole("link", {
@@ -310,20 +326,37 @@ describe("the job posting link (KAN-45)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders no link for an application without one", () => {
-    // Counted by class rather than by role: since KAN-60 every row also has
-    // Company and Role links, so a bare role count would mean nothing.
+  it("renders plain text for an application without one", () => {
+    // Globex has neither a source nor a link — "Unknown" rather than a link.
     setup();
-    expect(document.querySelectorAll(".link-out")).toHaveLength(1);
+    const row = screen.getByText("Globex").closest("tr");
+    expect(within(row).getByText("Unknown")).toBeInTheDocument();
+    expect(
+      within(row).queryByRole("link", { name: /open the posting/i })
+    ).toBeNull();
   });
 
-  it("renders no link for a value that is not http(s)", () => {
+  it("renders plain text for a value that is not http(s)", () => {
     // The column is still writable through the API, so a stored
     // "javascript:..." must not become a live anchor.
     setup({
       applications: [{ ...APPLICATIONS[0], job_link: "javascript:alert(1)" }],
     });
-    expect(document.querySelector(".link-out")).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /open the posting/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("LinkedIn")).toBeInTheDocument();
+  });
+
+  it("uses Unknown as the link text when a link exists but source does not", () => {
+    // The dangerous case the story calls out: 0 records had this shape on the
+    // deployed data, but the API and form both still permit it, so it needs a
+    // defined answer rather than an accident. An em dash would be unreachable
+    // from the list on touch; "Unknown" keeps the row honest and clickable.
+    setup({
+      applications: [{ ...APPLICATIONS[0], source: null }],
+    });
+    expect(link()).toHaveTextContent("Unknown");
   });
 
   it("goes to the posting, not to the detail screen", async () => {
@@ -334,6 +367,70 @@ describe("the job posting link (KAN-45)", () => {
     expect(
       screen.getByRole("link", { name: "Northwind" })
     ).toHaveAttribute("href", "/applications/1");
+  });
+});
+
+describe("favoriting from the list (KAN-81)", () => {
+  const favoriteButton = (company) =>
+    screen.getByText(company).closest("tr").querySelector(".favorite-toggle");
+
+  it("shows an outline star when not a favorite", () => {
+    setup();
+    const button = favoriteButton("Northwind");
+    expect(button).toHaveTextContent("☆");
+    expect(button).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows a filled star when a favorite", () => {
+    setup({
+      applications: [{ ...APPLICATIONS[0], is_favorite: true }],
+    });
+    const button = favoriteButton("Northwind");
+    expect(button).toHaveTextContent("★");
+    expect(button).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("names the row and the action, for assistive technology", () => {
+    setup();
+    expect(
+      screen.getByRole("button", { name: "Mark Northwind as a favorite" })
+    ).toBeInTheDocument();
+  });
+
+  it("names the reverse action once favorited", () => {
+    setup({
+      applications: [{ ...APPLICATIONS[0], is_favorite: true }],
+    });
+    expect(
+      screen.getByRole("button", { name: "Remove Northwind from favorites" })
+    ).toBeInTheDocument();
+  });
+
+  it("reports the toggle with the row it belongs to", async () => {
+    const onFavoriteChange = vi.fn();
+    setup({ onFavoriteChange });
+    await userEvent.click(favoriteButton("Northwind"));
+    expect(onFavoriteChange).toHaveBeenCalledWith(APPLICATIONS[0], true);
+  });
+
+  it("sends the opposite value when un-favoriting", async () => {
+    const onFavoriteChange = vi.fn();
+    setup({
+      applications: [{ ...APPLICATIONS[0], is_favorite: true }],
+      onFavoriteChange,
+    });
+    await userEvent.click(favoriteButton("Northwind"));
+    expect(onFavoriteChange).toHaveBeenCalledWith(
+      { ...APPLICATIONS[0], is_favorite: true },
+      false
+    );
+  });
+
+  it("is not inside the record link", () => {
+    // Same rule as the status select (KAN-59): nested in the link, every
+    // toggle would also navigate.
+    setup();
+    expect(favoriteButton("Northwind").closest("a")).toBeNull();
   });
 });
 
@@ -365,7 +462,10 @@ describe("required experience (KAN-47)", () => {
   it("shows a dash when nothing was recorded", () => {
     setup({ applications: [APPLICATIONS[1]] });
     const row = screen.getByText("Globex").closest("tr");
-    expect(row.cells[5]).toHaveTextContent("—");
+    // By heading, not a fixed index — see the KAN-64 lesson on why a
+    // hardcoded position only records which cell was checked, not which
+    // column it belonged to.
+    expect(row.cells[headerNames().indexOf("Experience")]).toHaveTextContent("—");
   });
 
   it("calls zero Entry rather than 0+", () => {
@@ -600,18 +700,19 @@ describe("changing a status from the list (KAN-59)", () => {
   });
 });
 
-describe("column order (KAN-64)", () => {
-  it("leads with identity, then the two controls", () => {
-    // KAN-74 prepended Id. That does not disturb what this protects: the rule
-    // is identity, then actions, then detail, and an id is identity — the
-    // defect KAN-64 fixed was Link, an action, wedged between Company and
-    // Role. Nothing is wedged here; identity simply starts one column earlier.
+describe("column order (KAN-64, reordered again by KAN-81)", () => {
+  it("leads with identity, then the row's controls", () => {
+    // KAN-64's rule survives the reorder rather than being bent by it:
+    // identity, then actions, then reference. Favorite, Source-as-link and
+    // Status are now the row's three interactive controls and sit together,
+    // where Link and Status previously sat five columns apart.
     setup();
-    expect(headerNames().slice(0, 5)).toEqual([
+    expect(headerNames().slice(0, 6)).toEqual([
       "Id",
       "Company",
       "Role",
-      "Link",
+      "Favorite",
+      "Source",
       "Status",
     ]);
   });
@@ -627,14 +728,16 @@ describe("column order (KAN-64)", () => {
 
     expect(under("Company")).toHaveTextContent("Northwind");
     expect(under("Role")).toHaveTextContent("QA Engineer");
-    expect(within(under("Link")).getByRole("link")).toHaveAttribute(
+    expect(
+      within(under("Favorite")).getByRole("button")
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(within(under("Source")).getByRole("link")).toHaveAttribute(
       "href",
       APPLICATIONS[0].job_link
     );
     expect(
       within(under("Status")).getByLabelText("Status for Northwind")
     ).toBeInTheDocument();
-    expect(under("Source")).toHaveTextContent("LinkedIn");
     expect(under("Experience")).toHaveTextContent("5");
     expect(under("Applied")).toHaveTextContent("2026-03-01");
   });

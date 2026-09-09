@@ -198,6 +198,32 @@ export default function ListPage() {
     }
   }
 
+  /**
+   * Toggles a favorite from the list (KAN-81), the same optimistic-then-revert
+   * shape as handleStatusChange above — a control left showing a value the
+   * server rejected is a lie. No re-sort here either, for the same reason:
+   * sorted by favorite, un-starring a row would make it jump.
+   */
+  async function handleFavoriteChange(app, isFavorite) {
+    const previous = app.is_favorite;
+
+    const apply = (value) =>
+      setApplications((rows) =>
+        rows.map((row) =>
+          row.id === app.id ? { ...row, is_favorite: value } : row
+        )
+      );
+
+    apply(isFavorite);
+    setError(null);
+    try {
+      await updateApplication(app.id, { is_favorite: isFavorite });
+    } catch (err) {
+      apply(previous);
+      setError(err.message);
+    }
+  }
+
   async function handleLoadMore() {
     setLoadingMore(true);
     setError(null);
@@ -298,6 +324,7 @@ export default function ListPage() {
             sortDir={sortDir}
             onSortChange={(col, dir) => setParams({ sort_by: col, sort_dir: dir })}
             onStatusChange={handleStatusChange}
+            onFavoriteChange={handleFavoriteChange}
           />
 
           {remaining > 0 && (

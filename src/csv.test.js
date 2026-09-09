@@ -23,6 +23,7 @@ const application = (overrides = {}) => ({
   notes: null,
   job_description: null,
   archived_at: null,
+  is_favorite: false,
   created_at: "2026-08-20T17:13:04",
   updated_at: "2026-08-20T17:13:04",
   contacts: [],
@@ -58,6 +59,13 @@ describe("toCsv", () => {
 
     it("writes the readable status label, not the stored enum", () => {
       expect(cell(toCsv([application()]), "Status")).toBe("Phone Screen");
+    });
+
+    it("writes the favorite flag as Yes or No", () => {
+      expect(cell(toCsv([application()]), "Favorite")).toBe("No");
+      expect(
+        cell(toCsv([application({ is_favorite: true })]), "Favorite")
+      ).toBe("Yes");
     });
 
     it("writes the company size band with its employee range", () => {

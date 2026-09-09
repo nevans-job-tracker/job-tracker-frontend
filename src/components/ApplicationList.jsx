@@ -101,12 +101,46 @@ export function formatAge(createdAt, now = new Date()) {
   return `${days}d`;
 }
 
+/**
+ * Source doubles as the posting link (KAN-81), replacing the old icon column
+ * — Source becomes the anchor rather than adding a fourth control.
+ *
+ * A blank source reads "Unknown" rather than an em dash. That is not only
+ * more informative — an em dash is a poor link target on touch — it is also
+ * what keeps the rare case of a link with no recorded source reachable: the
+ * anchor text is never empty and never just a dash, whether or not a link
+ * exists for the row.
+ */
+function sourceCell(app) {
+  const label = app.source || "Unknown";
+  if (!isOpenableLink(app.job_link)) return label;
+  return (
+    <a
+      href={app.job_link}
+      target="_blank"
+      // noopener: without it the opened page gets a handle on window.opener
+      // and can navigate this tab elsewhere.
+      rel="noopener noreferrer"
+      className="record-link"
+      // The old icon column carried this label unchanged from row to row, so
+      // the company was what made one link distinguishable from another. The
+      // visible text now names the source instead, which repeats across most
+      // rows ("LinkedIn" fifty times over) and stops saying what the link
+      // actually opens — so the descriptive label stays, on the anchor.
+      aria-label={`Open the posting for ${app.company} in a new tab`}
+    >
+      {label}
+    </a>
+  );
+}
+
 export default function ApplicationList({
   applications,
   sortBy,
   sortDir,
   onSortChange,
   onStatusChange,
+  onFavoriteChange,
 }) {
   function headerClick(col) {
     if (sortBy === col) {
@@ -146,7 +180,19 @@ export default function ApplicationList({
           <th className="col-wide" onClick={() => headerClick("role_title")}>
             Role{arrow("role_title")}
           </th>
-          <th className="col-wide col-link">Link</th>
+          {/* Replaces the old Link column (KAN-81) — the posting link moves
+              onto Source below, which is what funds this column rather than
+              widening the table. Starts col-wide, matching where Source and
+              the status select already sit: desktop only for now. */}
+          <th
+            className="col-wide col-favorite"
+            onClick={() => headerClick("is_favorite")}
+          >
+            Favorite{arrow("is_favorite")}
+          </th>
+          <th className="col-wide" onClick={() => headerClick("source")}>
+            Source{arrow("source")}
+          </th>
           <th onClick={() => headerClick("status")}>Status{arrow("status")}</th>
           {/* Location was dropped here (KAN-51) to make room: the search is
               effectively all-remote, so the column said "Remote" on nearly
@@ -154,9 +200,6 @@ export default function ApplicationList({
               the detail screen. */}
           <th className="col-wide" onClick={() => headerClick("employment_type")}>
             Type{arrow("employment_type")}
-          </th>
-          <th className="col-wide" onClick={() => headerClick("source")}>
-            Source{arrow("source")}
           </th>
           <th
             className="col-wide"
@@ -233,25 +276,32 @@ export default function ApplicationList({
                 {app.role_title}
               </Link>
             </td>
-            <td className="col-wide col-link">
-              {isOpenableLink(app.job_link) ? (
-                <a
-                  href={app.job_link}
-                  target="_blank"
-                  // noopener: without it the opened page gets a handle on
-                  // window.opener and can navigate this tab elsewhere.
-                  rel="noopener noreferrer"
-                  className="link-out"
-                  // The glyph is identical on every row, so the company is
-                  // what makes one link distinguishable from another.
-                  aria-label={`Open the posting for ${app.company} in a new tab`}
-                >
-                  ↗
-                </a>
-              ) : (
-                "—"
-              )}
+            {/* Replaces the old Link column. Not a mis-tap hazard the way the
+                status dropdown is (§4.2) — a button is not grabbed mid-scroll
+                the way a select is, and a mis-tap costs one tap to undo and
+                writes no history, where a mis-tapped status changes data and
+                leaves a permanent record. Starts col-wide anyway, matching
+                Source and the status select, since it is desktop real estate
+                either way until there is a reason to spend the mobile budget
+                on it. */}
+            <td className="col-wide col-favorite">
+              <button
+                type="button"
+                className={
+                  app.is_favorite ? "favorite-toggle is-favorite" : "favorite-toggle"
+                }
+                aria-pressed={Boolean(app.is_favorite)}
+                aria-label={
+                  app.is_favorite
+                    ? `Remove ${app.company} from favorites`
+                    : `Mark ${app.company} as a favorite`
+                }
+                onClick={() => onFavoriteChange?.(app, !app.is_favorite)}
+              >
+                {app.is_favorite ? "★" : "☆"}
+              </button>
             </td>
+            <td className="col-wide">{sourceCell(app)}</td>
             {/* The only cell whose *content* is responsive rather than its
                 presence. A dropdown here is a mis-tap hazard on touch, and
                 unlike KAN-45's link a mis-tap changes data — so the phone
@@ -276,7 +326,6 @@ export default function ApplicationList({
             <td className="col-wide">
               {EMPLOYMENT_TYPE_LABELS[app.employment_type] || "—"}
             </td>
-            <td className="col-wide">{app.source || "—"}</td>
             <td className="col-wide">
               {formatExperience(app.years_experience_min)}
             </td>

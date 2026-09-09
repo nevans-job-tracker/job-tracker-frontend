@@ -683,3 +683,63 @@ describe("changing a status from the list (KAN-59)", () => {
     expect(seen.url).toBe("/");
   });
 });
+
+describe("toggling a favorite from the list (KAN-81)", () => {
+  const firstFavorite = () =>
+    within(screen.getAllByRole("row")[1]).getByRole("button", {
+      name: /favorite/i,
+    });
+
+  it("saves the change", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    await userEvent.click(firstFavorite());
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { is_favorite: true })
+    );
+  });
+
+  it("shows the new value immediately, without refetching the list", async () => {
+    // Optimistic, the same shape as the status control above: the button has
+    // to respond at once, and a refetch would also re-sort the row out from
+    // under the cursor.
+    setup();
+    await screen.findByText("Company 01");
+    const before = listApplications.mock.calls.length;
+
+    await userEvent.click(firstFavorite());
+    expect(firstFavorite()).toHaveAttribute("aria-pressed", "true");
+    expect(listApplications.mock.calls.length).toBe(before);
+  });
+
+  it("reverts and explains when the save fails", async () => {
+    updateApplication.mockRejectedValueOnce(new Error("Application not found"));
+    setup();
+    await screen.findByText("Company 01");
+
+    await userEvent.click(firstFavorite());
+    expect(await screen.findByText(/application not found/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(firstFavorite()).toHaveAttribute("aria-pressed", "false")
+    );
+  });
+
+  it("changes only the row it was asked about", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const second = screen.getByRole("button", {
+      name: "Mark Company 02 as a favorite",
+    });
+
+    await userEvent.click(firstFavorite());
+    expect(second).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("does not navigate to the detail screen", async () => {
+    const seen = setup();
+    await screen.findByText("Company 01");
+    await userEvent.click(firstFavorite());
+    await waitFor(() => expect(updateApplication).toHaveBeenCalled());
+    expect(seen.url).toBe("/");
+  });
+});
