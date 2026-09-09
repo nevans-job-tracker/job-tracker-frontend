@@ -190,7 +190,6 @@ body {
     padding-inline: clamp(0px, calc((100% - 1280px) / 2), 16px);
   }
 }
-}
 
 header {
   display: flex;
