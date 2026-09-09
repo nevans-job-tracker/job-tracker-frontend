@@ -91,7 +91,7 @@ describe("ListPage", () => {
     expect(lastQuery()).toMatchObject({
       skip: 0,
       limit: 50,
-      sort_by: "date_applied",
+      sort_by: "created_at",
       sort_dir: "desc",
       search: "",
       status: "",

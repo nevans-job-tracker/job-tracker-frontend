@@ -22,7 +22,15 @@ const DEFAULTS = {
   activity: "active",
   source: "",
   show: "active",
-  sort_by: "date_applied",
+  // Was date_applied until KAN-77. Measured on the deployed data, 145 of 147
+  // records had no date_applied, so the old default tied on almost every row
+  // and the tie broke as ascending id — oldest first, with a just-saved
+  // record sinking toward Load more. created_at is never blank, so the
+  // default now actually orders by something. This must match the backend
+  // route's own default (app/routers/applications.py) — they are one
+  // decision in two places, and a bare GET has to agree with what this app
+  // sends explicitly.
+  sort_by: "created_at",
   sort_dir: "desc",
 };
 
