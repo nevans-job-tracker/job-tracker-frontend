@@ -44,12 +44,16 @@ export default function InsightsPage() {
 
   return (
     <>
-      <header>
-        {/* The same shape as the detail screen: the way out sits top left with
-            the title beneath it, and the header's right side is for controls.
-            This screen had the link on the right, so the two disagreed about
-            where "back" lives — and a reader arrives here from the list, so
-            this is the one that should match. */}
+      {/* The way out sits top left with the title beneath it, and the header's
+          right side is for controls. This screen had the link on the right, so
+          it disagreed with the detail screen about where "back" lives — and a
+          reader arrives here from the list, so this is the one that moved.
+
+          `header-stacked` keeps the theme toggle level with the back link. The
+          header centres its children by default, which is right when the left
+          side is a single heading; with a link stacked above a heading it puts
+          the toggle in the gap between the two, level with neither. */}
+      <header className="header-stacked">
         <div>
           {/* A plain link rather than history.back(): this screen is
               bookmarkable, so there is not always a list to go back to. */}

@@ -211,6 +211,14 @@ header {
   gap: 12px;
 }
 
+/* For a header whose left side stacks a back link above the heading. The
+   default centring is right for a single-line title, but against a two-line
+   block it drops the actions into the gap between the link and the heading,
+   level with neither. Top alignment puts them back in line with the link. */
+.header-stacked {
+  align-items: flex-start;
+}
+
 /* Kept at the opposite end of the header from the back link. §4.2 dropped
    per-row actions because adjacent touch targets were a mis-tap hazard, and
    the same reasoning applies to a Back and an Add sitting side by side. */

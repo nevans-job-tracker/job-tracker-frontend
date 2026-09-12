@@ -71,6 +71,19 @@ describe("InsightsPage", () => {
     expect(link.closest(".header-actions")).toBeNull();
   });
 
+  it("keeps the header top-aligned, so the toggle stays level with the link", async () => {
+    renderPage();
+    await screen.findByRole("img");
+
+    // Asserting the class, not the geometry: jsdom does not lay out, so it
+    // cannot see that dropping this puts the toggle in the gap between the
+    // link and the heading, level with neither. Measured in a real browser
+    // instead — link and toggle both at y=64 at desktop width and at 375px.
+    // The class is the only thing standing between that and the default
+    // centring, so it is what there is to guard.
+    expect(document.querySelector("header")).toHaveClass("header-stacked");
+  });
+
   it("shows an empty state rather than empty axes", async () => {
     api.getStatusTimeline.mockResolvedValue({ series: [], opening_count: 0 });
     const { container } = renderPage();
