@@ -6,6 +6,7 @@ import {
   updateApplication,
 } from "../api/client.js";
 import { toCsv, csvFilename, downloadCsv } from "../csv.js";
+import { todayISO } from "../dates.js";
 import ApplicationList from "../components/ApplicationList.jsx";
 import Filters from "../components/Filters.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
@@ -219,17 +220,44 @@ export default function ListPage() {
    */
   async function handleStatusChange(app, status) {
     if (status === app.status) return;
-    const previous = app.status;
 
-    const apply = (value) =>
+    // Marking an Interested row Applied records *that* you applied but not
+    // *when*, and it is almost always today — you are marking it at the moment
+    // you do it (KAN-84). Narrow on both sides, deliberately:
+    //
+    //   only from `interested`, the one status that asserts you have not
+    //   applied. Set from `rejected` this is a correction to a record whose
+    //   date is already a historical fact, and inventing today over it is wrong.
+    //
+    //   only when the date is empty, so the rule can never overwrite something
+    //   real. An `interested` row carrying a date is unusual but reachable, and
+    //   that date was typed by someone deliberately.
+    //
+    // The pair is sent explicitly rather than inferred by the API: a PATCH that
+    // silently adds a field the caller did not send would reach the extension
+    // and any hand-made request too. This interaction knows the date is empty
+    // because it is on screen.
+    const stampsToday =
+      app.status === "interested" && status === "applied" && !app.date_applied;
+
+    const changes = stampsToday
+      ? { status, date_applied: todayISO() }
+      : { status };
+    // Both fields go back on a failure. Leaving the date stamped after the
+    // write failed would record an application that was never marked.
+    const previous = stampsToday
+      ? { status: app.status, date_applied: app.date_applied }
+      : { status: app.status };
+
+    const apply = (values) =>
       setApplications((rows) =>
-        rows.map((row) => (row.id === app.id ? { ...row, status: value } : row))
+        rows.map((row) => (row.id === app.id ? { ...row, ...values } : row))
       );
 
-    apply(status);
+    apply(changes);
     setError(null);
     try {
-      await updateApplication(app.id, { status });
+      await updateApplication(app.id, changes);
     } catch (err) {
       apply(previous);
       setError(err.message);

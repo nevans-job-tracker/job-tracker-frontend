@@ -11,6 +11,7 @@ import {
   CONTRACT_TYPES,
 } from "../labels.js";
 import { isOpenableLink } from "../jobLink.js";
+import { todayISO } from "../dates.js";
 import CoverLetterField from "./CoverLetterField.jsx";
 
 const emptyForm = {
@@ -29,7 +30,7 @@ const emptyForm = {
   contract_term_months: "",
   hours_per_week_min: "",
   hours_per_week_max: "",
-  date_applied: new Date().toISOString().slice(0, 10),
+  date_applied: todayISO(),
   next_action: "",
   next_action_date: "",
   notes: "",
@@ -60,8 +61,6 @@ function toForm(initial) {
   }
   return form;
 }
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 // The only fields where what the user typed and what the server stores can
 // differ as strings while meaning the same thing: "120000" comes back
@@ -115,7 +114,8 @@ export default function ApplicationForm({
   // A future date is usually a typo — a mistyped year sorts to the top of the
   // list and stays there. It is still legitimate when logging something about
   // to be submitted, so this warns rather than blocking. See REQUIREMENTS.md §2.
-  const dateIsInFuture = Boolean(form.date_applied) && form.date_applied > today();
+  const dateIsInFuture =
+    Boolean(form.date_applied) && form.date_applied > todayISO();
 
   // The term field only appears for a contract. This mirrors the API rule
   // rather than replacing it — §6.1: a rule enforced only in the UI is

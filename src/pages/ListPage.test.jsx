@@ -10,6 +10,7 @@ import {
 } from "../api/client.js";
 import { downloadCsv } from "../csv.js";
 import { STATUS_LABELS } from "../labels.js";
+import { todayISO } from "../dates.js";
 
 vi.mock("../api/client.js", () => ({
   listApplications: vi.fn(),
@@ -839,5 +840,111 @@ describe("resetting the filters (KAN-78)", () => {
     await screen.findByText("Company 01");
     await userEvent.click(reset());
     await waitFor(() => expect(reset()).toBeDisabled());
+  });
+});
+
+describe("marking Interested as Applied stamps today (KAN-84)", () => {
+  const firstRow = () => screen.getAllByRole("row")[1];
+  const firstStatus = () => within(firstRow()).getByLabelText(/^Status for /);
+
+  // By heading, not by index. KAN-64 caught a test passing only because Type
+  // happened to be fourth, and the column order has moved twice since.
+  const appliedCell = () => {
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent);
+    return firstRow().cells[headers.findIndex((h) => h.startsWith("Applied"))];
+  };
+
+  const interested = (overrides = {}) => [
+    application(1, { status: "interested", date_applied: null, ...overrides }),
+    application(2),
+  ];
+
+  it("sends the date alongside the status, in one request", async () => {
+    setup({ items: interested() });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, {
+        status: "applied",
+        date_applied: todayISO(),
+      })
+    );
+    // One PATCH, so KAN-42 records one transition rather than two.
+    expect(updateApplication).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the stamped date without refetching", async () => {
+    setup({ items: interested() });
+    await screen.findByText("Company 01");
+    const before = listApplications.mock.calls.length;
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    expect(appliedCell()).toHaveTextContent(todayISO());
+    expect(listApplications.mock.calls.length).toBe(before);
+  });
+
+  it("never overwrites a date that is already there", async () => {
+    // An Interested row carrying a date is unusual but reachable, and that
+    // date was typed by someone deliberately.
+    setup({ items: interested({ date_applied: "2026-03-01" }) });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "applied" })
+    );
+    expect(appliedCell()).toHaveTextContent("2026-03-01");
+  });
+
+  it("leaves the date alone on every other transition out of Interested", async () => {
+    // Only `applied` means "you applied". Stamping a date onto a rejection
+    // would invent one for an application that may never have been sent.
+    setup({ items: interested() });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "rejected");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "rejected" })
+    );
+  });
+
+  it("leaves the date alone when Applied is reached from another status", async () => {
+    // `interested` is the one status that asserts you have not applied. From
+    // `rejected` this is a correction to a record whose date is a historical
+    // fact, so today is not the answer.
+    setup({
+      items: [
+        application(1, { status: "rejected", date_applied: null }),
+        application(2),
+      ],
+    });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "applied" })
+    );
+  });
+
+  it("puts both fields back when the save fails", async () => {
+    // Leaving the date stamped after the write failed would record an
+    // application that was never marked.
+    updateApplication.mockRejectedValueOnce(new Error("Application not found"));
+    setup({ items: interested() });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    expect(await screen.findByText(/application not found/i)).toBeInTheDocument();
+    await waitFor(() => expect(firstStatus()).toHaveValue("interested"));
+    expect(appliedCell()).not.toHaveTextContent(todayISO());
   });
 });
