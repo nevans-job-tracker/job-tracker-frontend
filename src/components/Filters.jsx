@@ -38,6 +38,8 @@ export default function Filters({
   onStatusFilterChange,
   show,
   onShowChange,
+  canReset = false,
+  onReset,
 }) {
   // One control, two parameters. A specific status wins outright and the set
   // options carry the lifecycle, so the dropdown never shows a value that is
@@ -122,6 +124,23 @@ export default function Filters({
           </option>
         ))}
       </select>
+      {/* Last in the row, so it reads as an action on the filters rather than
+          a sixth filter (KAN-78).
+
+          Always rendered, never conditional. A control that appears only when
+          it would do something reflows the row and cannot be aimed at from
+          memory, and the moment you reach for it is the moment you are least
+          sure what state the view is in — which is the worst moment to be
+          reading the toolbar to find out whether it exists. Disabled carries
+          that signal without moving anything. */}
+      <button
+        type="button"
+        className="link-button filter-reset"
+        onClick={onReset}
+        disabled={!canReset}
+      >
+        Reset Filters
+      </button>
     </div>
   );
 }

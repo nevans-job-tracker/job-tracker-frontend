@@ -743,3 +743,101 @@ describe("toggling a favorite from the list (KAN-81)", () => {
     expect(seen.url).toBe("/");
   });
 });
+
+describe("resetting the filters (KAN-78)", () => {
+  const reset = () => screen.getByRole("button", { name: /reset filters/i });
+
+  it("is disabled on a fresh visit", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    expect(reset()).toBeDisabled();
+  });
+
+  it("is enabled once a filter is on", async () => {
+    setup({ initialEntry: "/?search=netflix" });
+    await screen.findByText("Company 01");
+    expect(reset()).toBeEnabled();
+  });
+
+  it("stays disabled when only the sort differs", async () => {
+    // Sorting hides nothing, so a sorted view is not a filtered one and there
+    // is nothing for this control to undo.
+    setup({ initialEntry: "/?sort_by=salary_min&sort_dir=asc" });
+    await screen.findByText("Company 01");
+    expect(reset()).toBeDisabled();
+  });
+
+  it("empties the URL of every filter", async () => {
+    const seen = setup({
+      initialEntry: "/?search=netflix&source=Dice&show=all&activity=all",
+    });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(seen.url).toBe("/"));
+  });
+
+  it("leaves the URL clean rather than carrying explicit defaults", async () => {
+    // `activity=active&show=active` in the bar would be the same view spelled
+    // out loud, and would then travel into anything copied from it.
+    const seen = setup({ initialEntry: "/?show=archived" });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(seen.url).not.toMatch(/activity|show/));
+  });
+
+  it("keeps the sort", async () => {
+    // Someone sorting by pay to compare offers still wants pay order after
+    // clearing their filters. A button named Reset Filters that reordered the
+    // table would be doing something its label does not say.
+    const seen = setup({
+      initialEntry: "/?search=netflix&sort_by=salary_min&sort_dir=asc",
+    });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(seen.url).toBe("/?sort_by=salary_min&sort_dir=asc"));
+  });
+
+  it("asks the API for the unfiltered list", async () => {
+    setup({ initialEntry: "/?search=netflix&status=rejected&source=Dice" });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() =>
+      expect(lastQuery()).toMatchObject({
+        search: "",
+        status: "",
+        activity: "active",
+        source: "",
+        show: "active",
+      })
+    );
+  });
+
+  it("clears a status even though activity is derived from it", async () => {
+    // The trap this ticket names. With `status` set and no `activity` param,
+    // activity derives to "all". Clearing the two separately would make the
+    // result depend on the order, because removing `status` changes what
+    // `activity` falls back to. One write of explicit defaults avoids it.
+    const seen = setup({ initialEntry: "/?status=rejected" });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(seen.url).toBe("/"));
+    await waitFor(() =>
+      expect(lastQuery()).toMatchObject({ status: "", activity: "active" })
+    );
+  });
+
+  it("returns the controls themselves to their defaults", async () => {
+    setup({ initialEntry: "/?search=netflix&show=archived" });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveValue(""));
+    expect(screen.getByLabelText(/filter by archive state/i)).toHaveValue("active");
+  });
+
+  it("disables itself again once the filters are cleared", async () => {
+    setup({ initialEntry: "/?search=netflix" });
+    await screen.findByText("Company 01");
+    await userEvent.click(reset());
+    await waitFor(() => expect(reset()).toBeDisabled());
+  });
+});

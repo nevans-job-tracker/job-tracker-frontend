@@ -351,6 +351,16 @@ button:disabled {
   color: var(--text-disabled);
 }
 
+/* The only .link-button that sits in a horizontal row rather than a column,
+   so it has to undo the align-self the others depend on — otherwise it floats
+   at the top of the line while the selects beside it are twice its height
+   (KAN-78). Kept on one line so a narrow screen wraps the whole control onto
+   its own row rather than breaking the label in half; .filters already wraps. */
+.filter-reset {
+  align-self: center;
+  white-space: nowrap;
+}
+
 button.export {
   background: var(--success);
 }

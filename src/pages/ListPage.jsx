@@ -79,6 +79,36 @@ export default function ListPage() {
     [search, status, activity, source, show, sortBy, sortDir, setSearchParams]
   );
 
+  // Whether anything is filtered, which is what the Reset control's disabled
+  // state reports (KAN-78). Sort is not consulted: it hides nothing, so a view
+  // that is only sorted is not a filtered view.
+  const canReset =
+    search !== DEFAULTS.search ||
+    status !== DEFAULTS.status ||
+    activity !== DEFAULTS.activity ||
+    source !== DEFAULTS.source ||
+    show !== DEFAULTS.show;
+
+  /**
+   * Returns the list to what a fresh visit shows, leaving the sort alone.
+   *
+   * Writes the five defaults in one call rather than deleting params one at a
+   * time. `activity` derives from `status` when it is absent, so clearing them
+   * separately makes the outcome depend on the order they are cleared in.
+   * Passing explicit values sidesteps that; `setParams` then drops each one
+   * for being at its default, so the URL comes out clean rather than carrying
+   * `activity=active&show=active`.
+   */
+  const resetFilters = useCallback(() => {
+    setParams({
+      search: DEFAULTS.search,
+      status: DEFAULTS.status,
+      activity: DEFAULTS.activity,
+      source: DEFAULTS.source,
+      show: DEFAULTS.show,
+    });
+  }, [setParams]);
+
   const [applications, setApplications] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalUnfiltered, setTotalUnfiltered] = useState(0);
@@ -305,6 +335,8 @@ export default function ListPage() {
         }
         show={show}
         onShowChange={(value) => setParams({ show: value })}
+        canReset={canReset}
+        onReset={resetFilters}
       />
 
       <p className="result-count">

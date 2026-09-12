@@ -8,6 +8,7 @@ function setup(props = {}) {
   const onSourceChange = vi.fn();
   const onStatusChange = vi.fn();
   const onShowChange = vi.fn();
+  const onReset = vi.fn();
   render(
     <Filters
       search=""
@@ -18,10 +19,17 @@ function setup(props = {}) {
       onStatusChange={onStatusChange}
       show="active"
       onShowChange={onShowChange}
+      onReset={onReset}
       {...props}
     />
   );
-  return { onSearchChange, onSourceChange, onStatusChange, onShowChange };
+  return {
+    onSearchChange,
+    onSourceChange,
+    onStatusChange,
+    onShowChange,
+    onReset,
+  };
 }
 
 const clear = () => screen.queryByRole("button", { name: /clear search/i });
@@ -122,5 +130,40 @@ describe("the source filter (KAN-56)", () => {
     expect(placeholder).not.toMatch(/source/i);
     expect(placeholder).toMatch(/company/i);
     expect(placeholder).toMatch(/notes/i);
+  });
+});
+
+describe("resetting the filters (KAN-78)", () => {
+  const reset = () => screen.getByRole("button", { name: /reset filters/i });
+
+  it("is present even when nothing is filtered", () => {
+    // Deliberately unlike the search clear button above. That one sits inside
+    // the input and its absence costs nothing; this one anchors the end of the
+    // row, and a control that comes and goes reflows the row and cannot be
+    // aimed at from memory.
+    setup();
+    expect(reset()).toBeInTheDocument();
+  });
+
+  it("is disabled when nothing is filtered", () => {
+    setup({ canReset: false });
+    expect(reset()).toBeDisabled();
+  });
+
+  it("is enabled once something is filtered", () => {
+    setup({ canReset: true });
+    expect(reset()).toBeEnabled();
+  });
+
+  it("asks to be reset when pressed", async () => {
+    const { onReset } = setup({ canReset: true });
+    await userEvent.click(reset());
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it("cannot be pressed while disabled", async () => {
+    const { onReset } = setup({ canReset: false });
+    await userEvent.click(reset());
+    expect(onReset).not.toHaveBeenCalled();
   });
 });
