@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge.jsx";
 import { isOpenableLink } from "../jobLink.js";
@@ -134,6 +135,87 @@ function sourceCell(app) {
   );
 }
 
+/**
+ * The Applied cell's editor on wide screens (KAN-66).
+ *
+ * It cannot save on every change the way the status select does (KAN-59),
+ * because a native date input reports a change for each segment edit that
+ * forms a valid date. Typing a year of 2025 over an existing date passes
+ * through 0002, 0020 and 0202 on the way, and saving each of those would write
+ * a nonsense year to the record mid-keystroke.
+ *
+ * So the two ways of setting a date are told apart. Picking from the calendar
+ * — opened by clicking anywhere on the date, since the icon is hidden to keep
+ * the column narrow — produces a change with no key pressed, and saves at
+ * once: one interaction.
+ * Typing marks the input as being edited, and the save waits for Enter or for
+ * focus to leave. Escape abandons a typed edit.
+ *
+ * Blank is never saved. Clearing the date is left to the detail screen, so a
+ * cleared input just shows the stored date again.
+ */
+function AppliedDateInput({ app, onChange }) {
+  const stored = app.date_applied ?? "";
+  const [draft, setDraft] = useState(stored);
+  const typing = useRef(false);
+
+  // A change arriving from outside has to reach the input: KAN-84 stamping
+  // today when the status moves, or a failed save putting the old date back.
+  useEffect(() => {
+    setDraft(stored);
+    typing.current = false;
+  }, [stored]);
+
+  const commit = (value) => {
+    typing.current = false;
+    if (!value || value === stored) {
+      setDraft(stored);
+      return;
+    }
+    onChange?.(app, value);
+  };
+
+  return (
+    <input
+      type="date"
+      /* required is not about validation — there is no form. An empty required
+         input matches :invalid, which is what lets the stylesheet hide the
+         browser's mm/dd/yyyy placeholder on undated rows, and it also removes
+         Firefox's clear button, which would offer the clearing this cell
+         deliberately does not do. */
+      required
+      className="col-wide date-input"
+      aria-label={`Applied date for ${app.company}`}
+      value={draft}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") return commit(e.currentTarget.value);
+        if (e.key === "Escape") {
+          typing.current = false;
+          return setDraft(stored);
+        }
+        typing.current = true;
+      }}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (!typing.current) commit(e.target.value);
+      }}
+      onBlur={(e) => {
+        if (typing.current) commit(e.target.value);
+      }}
+      /* The calendar icon is hidden to keep the column narrow, so the whole
+         input opens the picker. showPicker throws where it is unsupported or
+         not triggered by a user gesture; the input still takes typing then. */
+      onClick={(e) => {
+        try {
+          e.currentTarget.showPicker?.();
+        } catch {
+          // Typing into the segments still works without the picker.
+        }
+      }}
+    />
+  );
+}
+
 export default function ApplicationList({
   applications,
   sortBy,
@@ -141,6 +223,7 @@ export default function ApplicationList({
   onSortChange,
   onStatusChange,
   onFavoriteChange,
+  onAppliedDateChange,
 }) {
   function headerClick(col) {
     if (sortBy === col) {
@@ -348,7 +431,13 @@ export default function ApplicationList({
             <td className="col-wide col-date" title={app.created_at || undefined}>
               {formatAge(app.created_at)}
             </td>
-            <td className="col-date">{app.date_applied || "—"}</td>
+            {/* The Status cell's pattern: text on a phone, a control on a wide
+                screen. A native control is a scroll trap on touch (KAN-59), and
+                that reason applies to a date input as much as to a select. */}
+            <td className="col-date">
+              <span className="col-narrow">{app.date_applied || "—"}</span>
+              <AppliedDateInput app={app} onChange={onAppliedDateChange} />
+            </td>
           </tr>
         ))}
       </tbody>

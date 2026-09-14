@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import ListPage from "./ListPage.jsx";
@@ -946,5 +946,71 @@ describe("marking Interested as Applied stamps today (KAN-84)", () => {
     expect(await screen.findByText(/application not found/i)).toBeInTheDocument();
     await waitFor(() => expect(firstStatus()).toHaveValue("interested"));
     expect(appliedCell()).not.toHaveTextContent(todayISO());
+  });
+});
+
+describe("correcting the applied date from the list (KAN-66)", () => {
+  const firstRow = () => screen.getAllByRole("row")[1];
+  const firstDate = () => within(firstRow()).getByLabelText(/^Applied date for /);
+  const firstStatus = () => within(firstRow()).getByLabelText(/^Status for /);
+
+  it("saves the date and nothing else", async () => {
+    // A plain field editor. The date-sets-status rule this story once carried
+    // went the other way, to KAN-84.
+    setup({ items: [application(1, { status: "interested", date_applied: null }), application(2)] });
+    await screen.findByText("Company 01");
+
+    fireEvent.change(firstDate(), { target: { value: "2026-09-10" } });
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { date_applied: "2026-09-10" })
+    );
+    expect(firstStatus()).toHaveValue("interested");
+  });
+
+  it("shows the new date at once, without refetching or re-sorting", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const before = listApplications.mock.calls.length;
+
+    fireEvent.change(firstDate(), { target: { value: "2026-02-14" } });
+
+    expect(firstDate()).toHaveValue("2026-02-14");
+    expect(within(firstRow()).getByText("Company 01")).toBeInTheDocument();
+    expect(listApplications.mock.calls.length).toBe(before);
+  });
+
+  it("puts the old date back when the save fails", async () => {
+    updateApplication.mockRejectedValueOnce(new Error("Application not found"));
+    setup();
+    await screen.findByText("Company 01");
+    const original = firstDate().value;
+
+    fireEvent.change(firstDate(), { target: { value: "2026-02-14" } });
+
+    expect(await screen.findByText(/application not found/i)).toBeInTheDocument();
+    await waitFor(() => expect(firstDate()).toHaveValue(original));
+  });
+
+  it("shows KAN-84's stamp in the input the moment the status moves", async () => {
+    // Where the two stories meet: marking Interested as Applied stamps today,
+    // and the input has to show that rather than keep its own empty draft.
+    // KAN-66 is the correction path for exactly that stamp.
+    setup({ items: [application(1, { status: "interested", date_applied: null }), application(2)] });
+    await screen.findByText("Company 01");
+    expect(firstDate()).toHaveValue("");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    expect(firstDate()).toHaveValue(todayISO());
+  });
+
+  it("does nothing when the same date is picked again", async () => {
+    setup();
+    await screen.findByText("Company 01");
+
+    fireEvent.change(firstDate(), { target: { value: firstDate().value } });
+
+    expect(updateApplication).not.toHaveBeenCalled();
   });
 });

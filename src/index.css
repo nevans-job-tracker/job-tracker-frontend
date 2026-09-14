@@ -177,11 +177,20 @@ body {
    ordinary job and must not collapse — a phone would otherwise render the
    table hard against both screen edges.
  
-   **1280px, and it must stay above the table's min-content.** Measured on the
-   deployed data that is 1185px, and the first attempt used 1180 — just below
+   **1360px, and it must stay above the table's min-content.** Measured on the
+   deployed data that was 1185px, and the first attempt used 1180 — just below
    it, which left 2.5px of padding at the moment the table ran out of room and
    put it 3px past the right edge with 3px still on the left. A three-pixel
    version of the exact defect this exists to remove.
+
+   It was 1280 until KAN-66, and the number moved for the reason the next
+   paragraph gives. Measured again on the deployed data, min-content had already
+   drifted to 1226px without anyone noticing, and the Applied column becoming a
+   date input first took it to 1279px — one pixel of headroom. A 1300px window
+   then reproduced the original defect exactly: 2.3px of padding on the left,
+   the table 3px past the right edge, and the page scrolling sideways. Hiding
+   the input's calendar icon brought it to 1265px, and 1360 puts the headroom
+   back at 95px, which is where this started.
 
    So the two directions to be wrong in are not equal. Too low reintroduces
    the asymmetry; too high only means the padding disappears a little earlier
@@ -195,7 +204,7 @@ body {
    content width, which is what the table actually has to fit in. */
 @media (min-width: 900px) {
   .container-wide {
-    padding-inline: clamp(0px, calc((100% - 1280px) / 2), 16px);
+    padding-inline: clamp(0px, calc((100% - 1360px) / 2), 16px);
   }
 }
 
@@ -586,6 +595,56 @@ textarea {
    §4.4 chose those nine pairs deliberately, and losing them would cost the
    list the at-a-glance scan it depends on. The badge-* class supplies the
    colours; this only has to stop the browser overriding them. */
+/* The Applied cell's editor (KAN-66). It reads as the text it replaces until it
+   is pointed at, the same way the status select sits borderless in its row —
+   an input border on every row would turn a column of dates into a form. */
+.date-input {
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  /* With the icon gone, this and the hover border are what say it is a
+     control — the status select sits on the same two cues. */
+  cursor: pointer;
+}
+
+.date-input:hover {
+  border-color: var(--border-strong);
+}
+
+.date-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Every pixel this input takes comes out of Role and Company, which wrap onto
+   extra lines when squeezed, so the browser's own padding goes and so does the
+   calendar icon. Clicking the date opens the picker instead (`showPicker` in
+   ApplicationList). Measured on the deployed data at a 1300px window: 132px
+   as the browser draws it cost 11.7px of height per row; 111px without the
+   icon costs 4.3px (2.4px at 1440), against 96px for the plain text it
+   replaced. */
+.date-input::-webkit-datetime-edit,
+.date-input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* An undated row shows nothing rather than the browser's mm/dd/yyyy. The input
+   is `required` purely so that empty matches :invalid; the segments come back
+   on focus, where the placeholder is useful. An undated cell is therefore
+   blank until pointed at — a deliberate trade for the row height above, and
+   KAN-84 fills the common case without anyone needing to find it. */
+.date-input:invalid:not(:focus)::-webkit-datetime-edit {
+  color: transparent;
+}
+
 .status-select {
   appearance: none;
   border: 1px solid transparent;

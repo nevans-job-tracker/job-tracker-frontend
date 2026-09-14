@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import ApplicationList, { formatAge } from "./ApplicationList.jsx";
@@ -446,8 +446,11 @@ describe("salary on one line (KAN-46)", () => {
   });
 
   it("keeps the date cell unbreakable for the same reason", () => {
+    // The class lives on the cell, not the text: since KAN-66 the text is a
+    // phone-only span beside the wide-screen input, and it is the cell that
+    // has to stay on one line whichever of the two is showing.
     setup();
-    expect(screen.getByText("2026-03-01")).toHaveClass("col-date");
+    expect(screen.getByText("2026-03-01").closest("td")).toHaveClass("col-date");
   });
 });
 
@@ -830,5 +833,174 @@ describe("the Added column (KAN-68)", () => {
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     const added = headers.findIndex((h) => h.startsWith("Added"));
     expect(headers[added + 1]).toMatch(/^Applied/);
+  });
+});
+
+describe("correcting the applied date from the list (KAN-66)", () => {
+  const dateInput = (company = "Northwind") =>
+    screen.getByLabelText(`Applied date for ${company}`);
+
+  const undated = [{ ...APPLICATIONS[0], date_applied: null }, APPLICATIONS[1]];
+
+  it("offers an input on wide screens and plain text on a phone", () => {
+    // Both are in the DOM; the stylesheet shows one or the other. The Status
+    // cell's pattern, for its reason: a native control is a scroll trap on
+    // touch (KAN-59).
+    setup();
+    expect(dateInput()).toHaveClass("col-wide");
+    expect(screen.getByText("2026-03-01")).toHaveClass("col-narrow");
+  });
+
+  it("shows the stored date", () => {
+    setup();
+    expect(dateInput()).toHaveValue("2026-03-01");
+  });
+
+  it("leaves an undated row empty rather than showing today", () => {
+    // Pre-filling would put today on nearly every row, and the column would
+    // stop telling applied from not-applied at a glance.
+    setup({ applications: undated });
+    expect(dateInput()).toHaveValue("");
+  });
+
+  it("saves a date picked from the calendar at once", () => {
+    // A picker selection is a change with no key pressed. One interaction.
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    fireEvent.change(dateInput(), { target: { value: "2026-02-20" } });
+
+    expect(onAppliedDateChange).toHaveBeenCalledWith(APPLICATIONS[0], "2026-02-20");
+  });
+
+  it("waits while a date is typed, so a half-typed year is never saved", () => {
+    // Typing a year of 2025 fires changes for 0002, 0020 and 0202 on the way.
+    // Each of those is a valid date, and saving on change would write them.
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    for (const partial of ["0002-03-01", "0020-03-01", "0202-03-01", "2025-03-01"]) {
+      fireEvent.keyDown(dateInput(), { key: "2" });
+      fireEvent.change(dateInput(), { target: { value: partial } });
+    }
+    expect(onAppliedDateChange).not.toHaveBeenCalled();
+
+    fireEvent.blur(dateInput());
+    expect(onAppliedDateChange).toHaveBeenCalledTimes(1);
+    expect(onAppliedDateChange).toHaveBeenCalledWith(APPLICATIONS[0], "2025-03-01");
+  });
+
+  it("saves a typed date on Enter", () => {
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    fireEvent.keyDown(dateInput(), { key: "1" });
+    fireEvent.change(dateInput(), { target: { value: "2026-03-10" } });
+    fireEvent.keyDown(dateInput(), { key: "Enter" });
+
+    expect(onAppliedDateChange).toHaveBeenCalledWith(APPLICATIONS[0], "2026-03-10");
+  });
+
+  it("abandons a typed date on Escape", () => {
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    fireEvent.keyDown(dateInput(), { key: "1" });
+    fireEvent.change(dateInput(), { target: { value: "2026-03-10" } });
+    fireEvent.keyDown(dateInput(), { key: "Escape" });
+    fireEvent.blur(dateInput());
+
+    expect(onAppliedDateChange).not.toHaveBeenCalled();
+    expect(dateInput()).toHaveValue("2026-03-01");
+  });
+
+  it("never saves a blank, and puts the stored date back", () => {
+    // Clearing is the detail screen's job. The picker's own Clear button
+    // arrives here as an empty change with no key pressed.
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    fireEvent.change(dateInput(), { target: { value: "" } });
+
+    expect(onAppliedDateChange).not.toHaveBeenCalled();
+    expect(dateInput()).toHaveValue("2026-03-01");
+  });
+
+  it("saves nothing when the date has not changed", () => {
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+
+    fireEvent.keyDown(dateInput(), { key: "Tab" });
+    fireEvent.blur(dateInput());
+
+    expect(onAppliedDateChange).not.toHaveBeenCalled();
+  });
+
+  it("follows the stored date when it changes from outside", () => {
+    // KAN-84 stamping today, or a failed save putting the old date back. A
+    // cell holding on to its own draft would show a date the record no
+    // longer has.
+    const { rerender } = render(
+      <MemoryRouter>
+        <ApplicationList applications={undated} sortBy="date_applied" sortDir="desc" />
+      </MemoryRouter>
+    );
+    expect(dateInput()).toHaveValue("");
+
+    rerender(
+      <MemoryRouter>
+        <ApplicationList
+          applications={[{ ...undated[0], date_applied: "2026-09-14" }, undated[1]]}
+          sortBy="date_applied"
+          sortDir="desc"
+        />
+      </MemoryRouter>
+    );
+    expect(dateInput()).toHaveValue("2026-09-14");
+  });
+
+  it("opens the picker when the date is clicked, since the icon is hidden", () => {
+    setup();
+    const input = dateInput();
+    input.showPicker = vi.fn();
+
+    fireEvent.click(input);
+
+    expect(input.showPicker).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing on click in a browser with no showPicker", () => {
+    // Older engines lack the method entirely rather than throwing from it.
+    setup();
+    const input = dateInput();
+    input.showPicker = undefined;
+
+    expect(() => fireEvent.click(input)).not.toThrow();
+  });
+
+  it("still takes typing where the picker cannot open", () => {
+    // showPicker throws without a user gesture or where it is unsupported.
+    // That must not break the cell: the segments still accept a typed date.
+    const onAppliedDateChange = vi.fn();
+    setup({ onAppliedDateChange });
+    const input = dateInput();
+    input.showPicker = vi.fn(() => {
+      throw new DOMException("not allowed", "NotAllowedError");
+    });
+
+    expect(() => fireEvent.click(input)).not.toThrow();
+
+    fireEvent.keyDown(input, { key: "1" });
+    fireEvent.change(input, { target: { value: "2026-03-10" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onAppliedDateChange).toHaveBeenCalledWith(APPLICATIONS[0], "2026-03-10");
+  });
+
+  it("is required only so an empty one can hide the browser placeholder", () => {
+    // There is no form, so nothing is validated. The stylesheet hangs the
+    // hidden mm/dd/yyyy off :invalid, which only an empty *required* input
+    // matches — drop the attribute and every undated row shows the placeholder.
+    setup({ applications: undated });
+    expect(dateInput()).toBeRequired();
   });
 });

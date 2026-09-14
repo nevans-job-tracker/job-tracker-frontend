@@ -218,7 +218,39 @@ export default function ListPage() {
    * sorted by status, changing one makes its position stale — but rows
    * relocating under the cursor is worse than being briefly out of order.
    */
-  async function handleStatusChange(app, status) {
+  /**
+   * Saves a row's fields from the list without waiting for the server.
+   *
+   * Applied at once and reverted if the save fails: a control left showing a
+   * value the server rejected is a lie, and whatever is done next would rest on
+   * it. Every field in the request is reverted, not just the one clicked, so a
+   * paired write never leaves half of itself behind. The row is not re-sorted
+   * or re-fetched — rows relocating under the cursor is worse than being
+   * briefly out of order.
+   *
+   * The status select (KAN-59), the star (KAN-81) and the Applied date
+   * (KAN-66) each had their own copy of this until the third arrived.
+   */
+  async function saveInPlace(app, changes) {
+    const previous = Object.fromEntries(
+      Object.keys(changes).map((key) => [key, app[key]])
+    );
+    const apply = (values) =>
+      setApplications((rows) =>
+        rows.map((row) => (row.id === app.id ? { ...row, ...values } : row))
+      );
+
+    apply(changes);
+    setError(null);
+    try {
+      await updateApplication(app.id, changes);
+    } catch (err) {
+      apply(previous);
+      setError(err.message);
+    }
+  }
+
+  function handleStatusChange(app, status) {
     if (status === app.status) return;
 
     // Marking an Interested row Applied records *that* you applied but not
@@ -240,54 +272,26 @@ export default function ListPage() {
     const stampsToday =
       app.status === "interested" && status === "applied" && !app.date_applied;
 
-    const changes = stampsToday
-      ? { status, date_applied: todayISO() }
-      : { status };
-    // Both fields go back on a failure. Leaving the date stamped after the
-    // write failed would record an application that was never marked.
-    const previous = stampsToday
-      ? { status: app.status, date_applied: app.date_applied }
-      : { status: app.status };
-
-    const apply = (values) =>
-      setApplications((rows) =>
-        rows.map((row) => (row.id === app.id ? { ...row, ...values } : row))
-      );
-
-    apply(changes);
-    setError(null);
-    try {
-      await updateApplication(app.id, changes);
-    } catch (err) {
-      apply(previous);
-      setError(err.message);
-    }
+    return saveInPlace(
+      app,
+      stampsToday ? { status, date_applied: todayISO() } : { status }
+    );
   }
 
-  /**
-   * Toggles a favorite from the list (KAN-81), the same optimistic-then-revert
-   * shape as handleStatusChange above — a control left showing a value the
-   * server rejected is a lie. No re-sort here either, for the same reason:
-   * sorted by favorite, un-starring a row would make it jump.
-   */
-  async function handleFavoriteChange(app, isFavorite) {
-    const previous = app.is_favorite;
+  function handleFavoriteChange(app, isFavorite) {
+    return saveInPlace(app, { is_favorite: isFavorite });
+  }
 
-    const apply = (value) =>
-      setApplications((rows) =>
-        rows.map((row) =>
-          row.id === app.id ? { ...row, is_favorite: value } : row
-        )
-      );
-
-    apply(isFavorite);
-    setError(null);
-    try {
-      await updateApplication(app.id, { is_favorite: isFavorite });
-    } catch (err) {
-      apply(previous);
-      setError(err.message);
-    }
+  // A plain field editor (KAN-66). It deliberately leaves the status alone:
+  // the date-sets-status rule this story once carried moved the other way, to
+  // KAN-84, so that two inference rules would not run in opposite directions
+  // between the same two fields.
+  //
+  // No same-value guard here, unlike handleStatusChange. The cell already
+  // drops an unchanged or blank date before calling this, so a second check
+  // could never run.
+  function handleAppliedDateChange(app, date) {
+    return saveInPlace(app, { date_applied: date });
   }
 
   async function handleLoadMore() {
@@ -393,6 +397,7 @@ export default function ListPage() {
             onSortChange={(col, dir) => setParams({ sort_by: col, sort_dir: dir })}
             onStatusChange={handleStatusChange}
             onFavoriteChange={handleFavoriteChange}
+            onAppliedDateChange={handleAppliedDateChange}
           />
 
           {remaining > 0 && (
