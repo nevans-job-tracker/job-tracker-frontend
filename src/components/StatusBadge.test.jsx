@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import StatusBadge from "./StatusBadge.jsx";
-import { STATUS_LABELS } from "../labels.js";
+import { STATUS_LABELS, STATUS_OPTIONS } from "../labels.js";
 
 describe("StatusBadge", () => {
   it("shows the readable label rather than the stored value", () => {
@@ -49,6 +49,34 @@ describe("the scam badge (KAN-79)", () => {
     expect(badge).toHaveClass("badge-scam");
     expect(badge).not.toHaveClass("badge-rejected");
     expect(badge).not.toHaveClass("badge-posting_closed");
+  });
+});
+
+describe("the duplicate badge (KAN-86)", () => {
+  it("renders its readable label", () => {
+    render(<StatusBadge status="duplicate" />);
+    expect(screen.getByText("Duplicate")).toBeInTheDocument();
+  });
+
+  it("does not wear either of the other two neutrals", () => {
+    // It belongs to the neutral family — bookkeeping rather than an outcome —
+    // but `ghosted` already holds the cool grey and `posting_closed` the light
+    // slate. A third light neutral would be unreadable where those three meet
+    // edge to edge as bands, so it has its own token pair and its own class.
+    render(<StatusBadge status="duplicate" />);
+    const badge = screen.getByText("Duplicate");
+    expect(badge).toHaveClass("badge-duplicate");
+    expect(badge).not.toHaveClass("badge-ghosted");
+    expect(badge).not.toHaveClass("badge-posting_closed");
+  });
+
+  it("reads last in the dropdown, outside the run of outcomes", () => {
+    // The nine before it say what happened to the application or the posting.
+    // This one says the tracker is holding the same job twice, which is not an
+    // outcome at all — so it sits after the terminal states rather than among
+    // them. Pinned because the order is the frontend's alone; the database
+    // appends, and a reorder here is silent.
+    expect(STATUS_OPTIONS[STATUS_OPTIONS.length - 1]).toBe("duplicate");
   });
 });
 

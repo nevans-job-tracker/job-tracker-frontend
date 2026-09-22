@@ -38,6 +38,19 @@ describe("toBands", () => {
     expect(bands.map((b) => b.status)).toEqual(["interested", "applied"]);
   });
 
+  it("gives a duplicate a band like any other status (KAN-86)", () => {
+    // Asserting a decision rather than a mechanism. `duplicate` was first
+    // specified as not appearing on this chart at all, and that was reversed:
+    // no status is excluded here, only archived records are (KAN-76), which
+    // filters on the record rather than on what it says. A per-status
+    // carve-out would turn "this is what the tracker held on these days" into
+    // "except the ones we decided not to count" — close to the claim §4.5
+    // rejected the funnel design for. Archiving is still how a duplicate
+    // leaves, and the backend already pins that half.
+    const bands = toBands([day("2026-09-01", { applied: 1, duplicate: 2 })]);
+    expect(bands.map((b) => b.status)).toContain("duplicate");
+  });
+
   it("stacks in STATUS_OPTIONS order, bottom first", () => {
     // A band must not swap places with its neighbour between days — the shape
     // would be meaningless. Fixing the order to the lifecycle is what

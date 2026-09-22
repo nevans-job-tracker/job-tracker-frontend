@@ -77,6 +77,14 @@ If `docs/` is empty after cloning, run `git submodule update --init`.
   `--badge-*-bg` tokens. That is what makes a chart band and a list badge the
   same colour, and it is why the chart needed no dark-mode work of its own. A
   new status needs a rule in both blocks.
+- **A new status's colour is a chart decision before it is a badge decision**
+  (KAN-86). Badges are read one at a time down a column; bands meet edge to
+  edge, so two similar fills survive the list and fail the chart. Measured
+  while adding `duplicate`: `ghosted` and `posting_closed` differ by a
+  contrast ratio of **1.00** as bands — indistinguishable — which is why
+  `duplicate` separates from both by weight rather than by another light
+  neutral. The palette has no free hue left, so weight is the remaining axis,
+  the same move `scam` made in KAN-79.
 - **mammoth is loaded with a dynamic `import()`** so Vite code-splits it. It is
   130 KB gzipped — most of the app again — and someone who never uploads a
   `.docx` never fetches a byte. Keep it that way: a static import would put it
@@ -104,5 +112,5 @@ Two consequences for this repo:
 ## Testing
 
 ```bash
-npm test      # 562 tests, 99% statements, 100% functions
+npm test      # 632 tests, 99% statements, 100% functions
 ```

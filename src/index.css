@@ -73,6 +73,23 @@
      disappears on the light one. */
   --badge-scam-bg: #9f1239;
   --badge-scam-fg: #ffe4e6;
+
+  /* The same job held twice (KAN-86), and the second neutral-family status
+     after `ghosted` and `posting_closed` — it is bookkeeping rather than an
+     outcome, so a neutral is right.
+
+     The problem is that those two already hold the cool grey and the light
+     slate, and a third light neutral is indistinguishable from them as a
+     stacked band on the insights chart, which is where three similar fills
+     meet edge to edge.
+
+     So it separates the way `scam` did when the palette ran out: weight
+     rather than hue. It is the heaviest neutral in both themes — mid slate
+     on light, a lighter slate on dark — which reads as more contrast against
+     the surface either way. Recessive enough that a row which should not be
+     there does not shout, and distinct enough to find at a glance. */
+  --badge-duplicate-bg: #94a3b8;
+  --badge-duplicate-fg: #0f172a;
 }
 
 /* The badges are not inverted mechanically. Flipping a light tint to its dark
@@ -129,6 +146,11 @@
   /* Unchanged from the light palette on purpose — see the note there. */
   --badge-scam-bg: #9f1239;
   --badge-scam-fg: #ffe4e6;
+  /* Still the heaviest neutral, which on a dark page means the lightest —
+     `ghosted` and `posting_closed` above are both dark tints, so this has to
+     go the other way to stay apart from them. */
+  --badge-duplicate-bg: #475569;
+  --badge-duplicate-fg: #e2e8f0;
 }
 
 * {
@@ -1025,6 +1047,10 @@ textarea {
   background: var(--badge-closed-bg);
   color: var(--badge-closed-fg);
 }
+.badge-duplicate {
+  background: var(--badge-duplicate-bg);
+  color: var(--badge-duplicate-fg);
+}
 .badge-scam {
   background: var(--badge-scam-bg);
   color: var(--badge-scam-fg);
@@ -1174,6 +1200,14 @@ textarea {
 .band-scam {
   fill: var(--badge-scam-bg);
   background: var(--badge-scam-bg);
+}
+/* A duplicate is charted like every other status (KAN-86). It was first
+   specified as not appearing here at all, and that was reversed: no status is
+   excluded from this chart, only archived records are (KAN-76), and archiving
+   a duplicate is still how it leaves. */
+.band-duplicate {
+  fill: var(--badge-duplicate-bg);
+  background: var(--badge-duplicate-bg);
 }
 
 /* Two sort targets in one header (KAN-72). The Pay cell shows a range, so

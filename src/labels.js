@@ -44,6 +44,12 @@ export const STATUS_LABELS = {
   // never one to end (KAN-79).
   scam: "Scam",
   withdrawn: "Withdrawn",
+  // Last, and outside the run above rather than at the end of it: the nine
+  // before it say what happened to the application or to the posting, and
+  // this one says the tracker is holding the same job twice (KAN-86). There
+  // is nothing wrong with the opportunity, so it does not belong among the
+  // outcomes. The database appends it — see the KAN-86 revision.
+  duplicate: "Duplicate",
 };
 
 export const STATUS_OPTIONS = Object.keys(STATUS_LABELS);

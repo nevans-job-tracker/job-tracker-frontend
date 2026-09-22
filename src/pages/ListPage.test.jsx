@@ -460,6 +460,8 @@ describe("ListPage", () => {
       // for free — which is exactly why it is worth pinning: a change to that
       // derivation would otherwise move it silently.
       expect(groupOf("Scam")).toBe("Inactive");
+      // Same property, same reason, one status later (KAN-86).
+      expect(groupOf("Duplicate")).toBe("Inactive");
       // The set options are not inside either group; they are the choice the
       // groups explain.
       expect(groupOf("Active Statuses")).toBeUndefined();
