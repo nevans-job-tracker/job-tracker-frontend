@@ -27,7 +27,13 @@ export default function ThemeToggle() {
       aria-label={`Switch to ${destination.toLowerCase()}`}
       aria-pressed={dark}
     >
-      <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+      {/* U+263E renders opening to the right in the system font stack, which
+          is the mirror of the conventional crescent. Flipped in CSS rather
+          than swapped for U+263D, because which way either glyph actually
+          faces is the font's decision and a transform is not (KAN-87). */}
+      <span className={dark ? undefined : "moon"} aria-hidden="true">
+        {dark ? "☀" : "☾"}
+      </span>
       {destination}
     </button>
   );

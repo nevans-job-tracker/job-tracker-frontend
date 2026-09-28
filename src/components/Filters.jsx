@@ -68,6 +68,29 @@ export default function Filters({
           </button>
         )}
       </div>
+      {/* Beside the search box, which reverses KAN-78's placement (KAN-87).
+          That story put it last so it would read as an action on the filters
+          rather than as a sixth filter. In use the opposite mattered more:
+          clearing the search is the most common reason to reach for it, and
+          last in the row puts it as far from the search box as the row
+          allows. It reads as an action from its shape now — bordered, in the
+          ordinary text colour rather than the accent — so position no longer
+          has to carry that alone.
+
+          Always rendered, never conditional. A control that appears only when
+          it would do something reflows the row and cannot be aimed at from
+          memory, and the moment you reach for it is the moment you are least
+          sure what state the view is in — which is the worst moment to be
+          reading the toolbar to find out whether it exists. Disabled carries
+          that signal without moving anything. */}
+      <button
+        type="button"
+        className="filter-reset"
+        onClick={onReset}
+        disabled={!canReset}
+      >
+        Reset Filters
+      </button>
       {/* Options come from the data rather than a fixed list, so a source the
           extension does not produce — a manual "Referral", or a typo — is
           still offered and still filterable. See KAN-56. */}
@@ -124,23 +147,6 @@ export default function Filters({
           </option>
         ))}
       </select>
-      {/* Last in the row, so it reads as an action on the filters rather than
-          a sixth filter (KAN-78).
-
-          Always rendered, never conditional. A control that appears only when
-          it would do something reflows the row and cannot be aimed at from
-          memory, and the moment you reach for it is the moment you are least
-          sure what state the view is in — which is the worst moment to be
-          reading the toolbar to find out whether it exists. Disabled carries
-          that signal without moving anything. */}
-      <button
-        type="button"
-        className="link-button filter-reset"
-        onClick={onReset}
-        disabled={!canReset}
-      >
-        Reset Filters
-      </button>
     </div>
   );
 }

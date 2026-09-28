@@ -122,6 +122,19 @@ describe("the source filter (KAN-56)", () => {
     expect(controls[2]).toBe(screen.getByLabelText(/filter by status/i));
   });
 
+  it("is no longer first after the search box, now that Reset sits there", () => {
+    // The test above deliberately looks only at the inputs and selects, so it
+    // survived Reset Filters moving in between them (KAN-87). This one reads
+    // the whole row, which is the order a person actually sees.
+    withSources();
+    const row = [
+      ...document.querySelectorAll(".filters > *, .filters .search-input"),
+    ].filter((e) => !e.classList.contains("search-field"));
+    expect(row[0]).toHaveClass("search-input");
+    expect(row[1]).toHaveClass("filter-reset");
+    expect(row[2]).toBe(sourceSelect());
+  });
+
   it("no longer advertises source in the search placeholder", () => {
     // The field still searches source; only the wording changes, now that
     // there is a dedicated control for it.
@@ -165,5 +178,16 @@ describe("resetting the filters (KAN-78)", () => {
     const { onReset } = setup({ canReset: false });
     await userEvent.click(reset());
     expect(onReset).not.toHaveBeenCalled();
+  });
+
+  it("is a control rather than a link (KAN-87)", () => {
+    // It was a .link-button: borderless, accent-coloured, and half the height
+    // of the selects beside it, which read as a link parked at the end of a
+    // row of controls. The class is what carries that styling, so dropping it
+    // is the assertion. What it looks like now is a browser question, not a
+    // jsdom one, and was measured there instead.
+    setup();
+    expect(reset()).not.toHaveClass("link-button");
+    expect(reset()).toHaveClass("filter-reset");
   });
 });

@@ -181,3 +181,26 @@ describe("the pre-mount script in index.html", () => {
     expect(html).toMatch(/try \{[\s\S]*catch/);
   });
 });
+
+describe("the crescent faces the conventional way (KAN-87)", () => {
+  // U+263E renders opening to the right in this font stack, which is the
+  // mirror of the crescent every other dark-mode toggle uses. The flip is a
+  // CSS transform, so what jsdom can check is that the hook for it is on the
+  // moon and only on the moon — a sun flipped on its y-axis is a sun, but the
+  // class appearing on both would mean the rule was written against the
+  // wrong element and nobody would notice from the light theme alone.
+  const icon = () => button().querySelector("span");
+
+  it("marks the moon so the stylesheet can flip it", () => {
+    render(<ThemeToggle />);
+    expect(icon()).toHaveTextContent("☾");
+    expect(icon()).toHaveClass("moon");
+  });
+
+  it("does not mark the sun", async () => {
+    render(<ThemeToggle />);
+    await userEvent.click(button());
+    expect(icon()).toHaveTextContent("☀");
+    expect(icon()).not.toHaveClass("moon");
+  });
+});

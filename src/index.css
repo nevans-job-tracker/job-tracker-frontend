@@ -276,6 +276,19 @@ header {
   flex-shrink: 0;
 }
 
+/* The back link is 36px tall *and* carries a bottom margin, because on the
+   detail and insights screens it sits above a heading and needs the gap. In
+   this header it is one of a row of controls, and against `align-items:
+   center` that margin lifts it three pixels above its neighbours while the
+   min-height makes it four pixels taller than them (KAN-87). Measured on the
+   deployed build before the fix: three controls centred on 85 and this one on
+   82. The margin is removed here and kept everywhere else, and the weight
+   drops to match the row rather than lead it. */
+.header-actions .back-link {
+  margin-bottom: 0;
+  font-weight: 500;
+}
+
 h1 {
   font-size: 1.5rem;
   margin: 0;
@@ -348,16 +361,22 @@ button:disabled {
    and an icon on its own is doubly ambiguous — a moon could mean "is dark" or
    "go dark". Outlined rather than filled so it does not compete with Export
    and Add, which are the actions that change something. */
+/* Sized to the same 36px box as .back-link and .toolbar-button rather than to
+   its own numbers (KAN-87). It was 0.85rem with 7px padding, which came out a
+   pixel or two shorter than everything beside it — small enough to look like
+   bad rendering rather than like a decision. */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: transparent;
+  background: var(--surface);
   color: var(--text-secondary);
   border: 1px solid var(--border-strong);
-  padding: 7px 12px;
+  min-height: 36px;
+  padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .theme-toggle:hover {
@@ -369,6 +388,15 @@ button:disabled {
 .theme-toggle span {
   font-size: 1rem;
   line-height: 1;
+}
+
+/* U+263E faces right in this font stack, which is the mirror of the crescent
+   everything else uses. Flipping it is deterministic where picking a
+   different code point is not — see the note in ThemeToggle.jsx. The
+   inline-block is load-bearing: `transform` does nothing on an inline box. */
+.theme-toggle .moon {
+  display: inline-block;
+  transform: scaleX(-1);
 }
 
 .link-button {
@@ -390,22 +418,79 @@ button:disabled {
   color: var(--text-disabled);
 }
 
-/* The only .link-button that sits in a horizontal row rather than a column,
-   so it has to undo the align-self the others depend on — otherwise it floats
-   at the top of the line while the selects beside it are twice its height
-   (KAN-78). Kept on one line so a narrow screen wraps the whole control onto
-   its own row rather than breaking the label in half; .filters already wraps. */
+/* No longer a .link-button (KAN-87). As a borderless accent-coloured label it
+   read as a link parked at the end of a row of real controls, and it was half
+   their height. It now takes the same bordered shape as the theme toggle and
+   the ordinary text colour of the dropdowns it sits between, so it reads as a
+   control without competing with them for attention.
+   Kept on one line so a narrow screen wraps the whole control onto its own row
+   rather than breaking the label in half; .filters already wraps. */
 .filter-reset {
-  align-self: center;
+  /* Stretch rather than a height of its own, so it stays level with the
+     selects beside it whether or not their intrinsic height ever changes.
+     This is what .link-button's align-self: flex-start used to fight. */
+  align-self: stretch;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.filter-reset:hover:not(:disabled) {
+  background: var(--surface-subtle);
+  border-color: var(--text-muted);
+}
+
+.filter-reset:disabled {
+  color: var(--text-disabled);
+}
+
+/* The header's controls, in one shape (KAN-87). They were built at four
+   different times and agreed on nothing: three heights, two font sizes, and a
+   border on two of the four.
+
+   None of them is filled. Export CSV was the only solid-background control on
+   the screen and therefore the loudest thing on it, while being among the
+   least-used — applications mostly arrive through the extension or an agent,
+   so + Add application is rarely pressed either. That is KAN-58's rule, which
+   set the detail screen's hierarchy by how often a control is used rather than
+   by which existed first, applied to this header for the first time.
+
+   Colour survives as *text* colour, so Export CSV is still findable as the
+   green one without claiming the page's focus. */
+.toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* currentColor, so each control's hover border picks up its own meaning
+   colour rather than needing a rule per button. */
+.toolbar-button:hover:not(:disabled) {
+  background: var(--surface-subtle);
+  border-color: currentColor;
+}
+
+.toolbar-button:disabled {
+  color: var(--text-disabled);
+  background: var(--surface);
 }
 
 button.export {
-  background: var(--success);
-}
-
-button.export:hover {
-  background: var(--success-hover);
+  color: var(--success);
 }
 
 button.danger {

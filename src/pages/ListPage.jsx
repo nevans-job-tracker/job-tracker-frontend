@@ -329,7 +329,7 @@ export default function ListPage() {
           {/* Disabled on an empty result: a file of nothing but headers is a
               puzzle rather than a deliverable. */}
           <button
-            className="export"
+            className="toolbar-button export"
             onClick={handleExport}
             disabled={exporting || total === 0}
           >
@@ -340,7 +340,10 @@ export default function ListPage() {
           <Link className="back-link" to="/insights">
             Insights
           </Link>
-          <button onClick={() => navigate("/applications/new")}>
+          <button
+            className="toolbar-button"
+            onClick={() => navigate("/applications/new")}
+          >
             + Add application
           </button>
         </div>

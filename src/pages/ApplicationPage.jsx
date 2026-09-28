@@ -197,7 +197,11 @@ export default function ApplicationPage() {
               silently wipe what has been typed. There is nothing to add to
               while you are already adding. */}
           {!isNew && (
-            <button type="button" onClick={startAnother}>
+            <button
+              type="button"
+              className="toolbar-button"
+              onClick={startAnother}
+            >
               + Add application
             </button>
           )}

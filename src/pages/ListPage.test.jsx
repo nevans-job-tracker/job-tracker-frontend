@@ -1016,3 +1016,56 @@ describe("correcting the applied date from the list (KAN-66)", () => {
     expect(updateApplication).not.toHaveBeenCalled();
   });
 });
+
+describe("the header is one set of controls (KAN-87)", () => {
+  // Four controls built at four different times, agreeing on nothing: three
+  // heights, two font sizes, and a border on two of the four. Heights and
+  // alignment are a browser question and were measured there; what jsdom can
+  // hold is that none of them takes the filled default any more.
+  //
+  // Export CSV was the only solid-background control on the screen, and among
+  // the least-used, so it was the loudest thing on the page for no reason.
+  // That is KAN-58's rule — weight follows how often a control is used, not
+  // which one existed first — reaching this header for the first time.
+  const headerButtons = () => [
+    ...document.querySelectorAll(".header-actions button"),
+  ];
+
+  it("gives every header button the same shape", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const names = headerButtons().map((b) => b.textContent.trim());
+    expect(names).toEqual([
+      expect.stringContaining("mode"),
+      "Export CSV",
+      "+ Add application",
+    ]);
+    // The theme toggle carries its own equivalent rule, so it is exempt from
+    // the class while sharing the shape.
+    for (const b of headerButtons()) {
+      if (b.classList.contains("theme-toggle")) continue;
+      expect(b).toHaveClass("toolbar-button");
+    }
+  });
+
+  it("leaves no filled button in the header", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    // A bare <button> takes the global accent fill. Every one here overrides
+    // it, so a new control added without a class would fail this.
+    for (const b of headerButtons()) {
+      expect(
+        b.classList.contains("toolbar-button") ||
+          b.classList.contains("theme-toggle")
+      ).toBe(true);
+    }
+  });
+
+  it("keeps Export CSV findable as the green one, in text not fill", async () => {
+    setup();
+    await screen.findByText("Company 01");
+    const exportButton = screen.getByRole("button", { name: /export csv/i });
+    expect(exportButton).toHaveClass("toolbar-button");
+    expect(exportButton).toHaveClass("export");
+  });
+});
