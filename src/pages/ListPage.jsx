@@ -269,13 +269,36 @@ export default function ListPage() {
     // silently adds a field the caller did not send would reach the extension
     // and any hand-made request too. This interaction knows the date is empty
     // because it is on screen.
-    const stampsToday =
-      app.status === "interested" && status === "applied" && !app.date_applied;
+    const becomesApplied = app.status === "interested" && status === "applied";
+    const stampsToday = becomesApplied && !app.date_applied;
 
-    return saveInPlace(
-      app,
-      stampsToday ? { status, date_applied: todayISO() } : { status }
-    );
+    // The other half of the same move (KAN-92). Next action almost always
+    // reads "Apply" on an interested row, and the instant the status changes
+    // that is an instruction to do the thing just done — sitting in the column
+    // §4.2 calls the most actionable one, and one of only four a phone shows.
+    //
+    // It shares KAN-84's transition but deliberately not its date guard. That
+    // guard exists so a real date is never overwritten; "Apply" is stale
+    // whether or not a date was already recorded, so reusing the guard would
+    // leave the text behind on exactly the rows KAN-84 declines to stamp.
+    //
+    // Exact match rather than a prefix. "Apply" carries nothing the status
+    // does not; "Apply by Friday 5pm" carries a deadline. No such value exists
+    // in the data today — measured, 182 rows and every one of them plain
+    // "Apply" — which is why the narrow rule costs nothing now and is still
+    // right when one appears.
+    const clearsNextAction =
+      becomesApplied && (app.next_action ?? "").trim().toLowerCase() === "apply";
+
+    // null, never "". §4.2 sorts NULL greater than every real value, and an
+    // empty string is a real value — clearing a row with "" would quietly move
+    // it in a Next-action sort. `exclude_unset` on the update schema passes an
+    // explicit null through to the column, so this needs no API change.
+    return saveInPlace(app, {
+      status,
+      ...(stampsToday ? { date_applied: todayISO() } : {}),
+      ...(clearsNextAction ? { next_action: null } : {}),
+    });
   }
 
   function handleFavoriteChange(app, isFavorite) {

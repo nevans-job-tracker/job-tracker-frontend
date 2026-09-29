@@ -1069,3 +1069,166 @@ describe("the header is one set of controls (KAN-87)", () => {
     expect(exportButton).toHaveClass("export");
   });
 });
+
+describe("clearing a stale Apply next action (KAN-92)", () => {
+  const firstRow = () => screen.getAllByRole("row")[1];
+  const firstStatus = () => within(firstRow()).getByLabelText(/^Status for /);
+
+  // By heading, never by index — KAN-64's lesson, and this column has moved.
+  const nextActionCell = () => {
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent);
+    return firstRow().cells[
+      headers.findIndex((h) => h.startsWith("Next action"))
+    ];
+  };
+
+  const interested = (next_action, overrides = {}) => [
+    application(1, {
+      status: "interested",
+      date_applied: null,
+      next_action,
+      ...overrides,
+    }),
+    application(2),
+  ];
+
+  it("clears it alongside the status and the date, in one request", async () => {
+    setup({ items: interested("Apply") });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, {
+        status: "applied",
+        date_applied: todayISO(),
+        next_action: null,
+      })
+    );
+    // One PATCH, so KAN-42 still records one transition rather than two.
+    expect(updateApplication).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears to null rather than an empty string", async () => {
+    // §4.2 sorts NULL greater than every real value, and "" is a real value —
+    // clearing with "" would quietly move the row in a Next action sort.
+    setup({ items: interested("Apply") });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() => expect(updateApplication).toHaveBeenCalled());
+    expect(updateApplication.mock.calls[0][1].next_action).toBeNull();
+  });
+
+  it.each(["apply", "Apply", "APPLY", "  Apply  "])(
+    "matches %o regardless of case and surrounding space",
+    async (value) => {
+      setup({ items: interested(value) });
+      await screen.findByText("Company 01");
+
+      await userEvent.selectOptions(firstStatus(), "applied");
+
+      await waitFor(() =>
+        expect(updateApplication.mock.calls[0][1]).toHaveProperty(
+          "next_action",
+          null
+        )
+      );
+    }
+  );
+
+  it.each(["Apply by Friday 5pm", "Reapply in January", "Online Assessment"])(
+    "leaves %o alone",
+    async (value) => {
+      // Exact match, not a prefix. "Apply" carries nothing the status does
+      // not; "Apply by Friday 5pm" carries a deadline the status cannot
+      // replace.
+      setup({ items: interested(value) });
+      await screen.findByText("Company 01");
+
+      await userEvent.selectOptions(firstStatus(), "applied");
+
+      await waitFor(() => expect(updateApplication).toHaveBeenCalled());
+      expect(updateApplication.mock.calls[0][1]).not.toHaveProperty(
+        "next_action"
+      );
+    }
+  );
+
+  it("clears even when a date is already recorded", async () => {
+    // KAN-84's date guard is deliberately not shared. A real date must never
+    // be overwritten; "Apply" is stale either way, so reusing that guard would
+    // leave the text behind on exactly the rows KAN-84 declines to stamp.
+    setup({ items: interested("Apply", { date_applied: "2026-03-01" }) });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, {
+        status: "applied",
+        next_action: null,
+      })
+    );
+  });
+
+  it("leaves it alone on every other transition out of Interested", async () => {
+    setup({ items: interested("Apply") });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "rejected");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "rejected" })
+    );
+  });
+
+  it("leaves it alone when Applied is reached from another status", async () => {
+    setup({
+      items: [
+        application(1, {
+          status: "posting_closed",
+          date_applied: null,
+          next_action: "Apply",
+        }),
+        application(2),
+      ],
+    });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(1, { status: "applied" })
+    );
+  });
+
+  it("shows the cleared cell at once, without refetching", async () => {
+    setup({ items: interested("Apply") });
+    await screen.findByText("Company 01");
+    const before = listApplications.mock.calls.length;
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    expect(nextActionCell()).not.toHaveTextContent(/apply/i);
+    expect(listApplications.mock.calls.length).toBe(before);
+  });
+
+  it("puts all three fields back when the save fails", async () => {
+    // The optimistic revert restores whatever keys it was given, so a third
+    // key is covered by construction — which is exactly why it is worth an
+    // assertion rather than an assumption.
+    updateApplication.mockRejectedValueOnce(new Error("nope"));
+    setup({ items: interested("Apply") });
+    await screen.findByText("Company 01");
+
+    await userEvent.selectOptions(firstStatus(), "applied");
+
+    expect(await screen.findByText("nope")).toBeInTheDocument();
+    expect(nextActionCell()).toHaveTextContent("Apply");
+    expect(firstStatus()).toHaveValue("interested");
+  });
+});
