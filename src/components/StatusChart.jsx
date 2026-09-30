@@ -1,4 +1,10 @@
 import { STATUS_LABELS, STATUS_OPTIONS } from "../labels.js";
+// Moved to chart.js when the second chart needed the same two (KAN-90).
+// Re-exported because this module's own tests and any other caller already
+// import niceTicks from here, and a moved export is a silent breakage.
+import { niceTicks, shortDate } from "../chart.js";
+
+export { niceTicks };
 
 /**
  * A stacked area of how many applications sat in each status, day by day
@@ -108,29 +114,6 @@ export function totalPath(bands) {
   return `M${top.map((p) => `${p.x.toFixed(2)},${p.y1.toFixed(2)}`).join("L")}`;
 }
 
-/**
- * Tick values a person reads without counting: 1, 2, 5 and their decades.
- */
-export function niceTicks(peak, count = 4) {
-  if (peak <= 0) return [0];
-  const raw = peak / count;
-  const magnitude = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= raw);
-
-  const ticks = [];
-  for (let value = 0; value <= peak; value += step) ticks.push(value);
-  return ticks;
-}
-
-// Read at midday rather than midnight. The series carries plain dates, and
-// `new Date("2026-09-04")` is midnight UTC — which is the previous day in
-// every western timezone, so every label would be off by one.
-const shortDate = (iso) =>
-  new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
-
 export default function StatusChart({ series, openingCount = 0 }) {
   if (!series || series.length === 0) return null;
 
@@ -148,6 +131,10 @@ export default function StatusChart({ series, openingCount = 0 }) {
 
   return (
     <div className="chart">
+      {/* Unlabelled while it was the only chart on the screen, where the h1
+          said what it was. A second one (KAN-90) makes both need naming. */}
+      <h2 className="chart-heading">Applications by status</h2>
+
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="chart-svg"

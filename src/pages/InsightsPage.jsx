@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getStatusTimeline } from "../api/client.js";
+import { getAppliedPerDay, getStatusTimeline } from "../api/client.js";
+import AppliedChart from "../components/AppliedChart.jsx";
 import StatusChart from "../components/StatusChart.jsx";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 
@@ -20,6 +21,7 @@ import ThemeToggle from "../components/ThemeToggle.jsx";
  */
 export default function InsightsPage() {
   const [timeline, setTimeline] = useState(null);
+  const [applied, setApplied] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,20 +29,31 @@ export default function InsightsPage() {
     let cancelled = false;
 
     (async () => {
-      try {
-        const data = await getStatusTimeline();
-        if (!cancelled) setTimeline(data);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // allSettled rather than all, so one endpoint failing costs its own
+      // chart and not the page. That is KAN-56's rule for the source filter
+      // applied to a screen with two independent reads: losing one thing
+      // should lose that thing.
+      const [status, perDay] = await Promise.allSettled([
+        getStatusTimeline(),
+        getAppliedPerDay(),
+      ]);
+      if (cancelled) return;
+
+      if (status.status === "fulfilled") setTimeline(status.value);
+      if (perDay.status === "fulfilled") setApplied(perDay.value);
+
+      const failed = [status, perDay].find((r) => r.status === "rejected");
+      if (failed) setError(failed.reason.message);
+      setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const hasApplied = applied && applied.series.length > 0;
+  const hasTimeline = timeline && timeline.series.length > 0;
 
   return (
     <>
@@ -71,20 +84,35 @@ export default function InsightsPage() {
 
       {loading ? (
         <p>Loading...</p>
-      ) : timeline && timeline.series.length > 0 ? (
-        <StatusChart
-          series={timeline.series}
-          openingCount={timeline.opening_count}
-        />
       ) : (
-        // Reached only before anything has been tracked at all. Drawing an
-        // empty pair of axes would look like a chart that failed to load.
-        !error && (
-          <p className="empty-state">
-            Nothing to chart yet — status history starts with your first
-            application.
-          </p>
-        )
+        <>
+          {hasTimeline && (
+            <StatusChart
+              series={timeline.series}
+              openingCount={timeline.opening_count}
+            />
+          )}
+
+          {/* Below the status chart rather than above it. That one answers
+              "how is it going", which is why the screen exists; this answers
+              "what have I been doing", which is the narrower question. Purely
+              an ordering call, and a one-line change if reading it the other
+              way round turns out to be better. */}
+          {hasApplied && <AppliedChart series={applied.series} />}
+
+          {/* Each chart has its own empty case, and they are not the same
+              one: history begins at the first record, but this chart needs a
+              record that was actually *applied to*, which most are not
+              (KAN-31). Saying so separately stops a shortlist with no
+              applications looking like a screen that failed to load. */}
+          {!hasApplied && !error && (
+            <p className="empty-state">
+              {hasTimeline
+                ? "No applications have been sent yet, so there is nothing to chart per day."
+                : "Nothing to chart yet — status history starts with your first application."}
+            </p>
+          )}
+        </>
       )}
     </>
   );

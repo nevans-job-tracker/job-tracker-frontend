@@ -6,6 +6,7 @@ import {
   getApplication,
   getStatusHistory,
   getStatusTimeline,
+  getAppliedPerDay,
   createApplication,
   updateApplication,
   archiveApplication,
@@ -75,6 +76,26 @@ describe("getStatusTimeline", () => {
   it("surfaces a failure rather than returning nothing", async () => {
     global.fetch.mockResolvedValue(mockResponse({ ok: false, status: 500 }));
     await expect(getStatusTimeline()).rejects.toThrow();
+  });
+});
+
+describe("getAppliedPerDay", () => {
+  it("requests the applications-sent collection", async () => {
+    await getAppliedPerDay();
+    expect(calledUrl()).toBe(`${BASE}/applications/applied-per-day`);
+  });
+
+  it("returns the body", async () => {
+    const body = { series: [{ date: "2026-09-12", count: 6 }] };
+    global.fetch.mockResolvedValue(mockResponse({ body }));
+    expect(await getAppliedPerDay()).toEqual(body);
+  });
+
+  it("surfaces a failure rather than returning nothing", async () => {
+    // The insights screen reads two endpoints and keeps the chart whose
+    // request worked, which only holds if a failure actually rejects.
+    global.fetch.mockResolvedValue(mockResponse({ ok: false, status: 500 }));
+    await expect(getAppliedPerDay()).rejects.toThrow();
   });
 });
 

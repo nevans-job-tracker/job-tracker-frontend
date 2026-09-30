@@ -85,6 +85,16 @@ export async function getStatusTimeline() {
   return handleResponse(res);
 }
 
+/**
+ * Applications sent per day (KAN-90), read from `date_applied` rather than
+ * the history table — see §2.2. Its own endpoint for the same reason the
+ * timeline has one: the day-by-day shape is computed once, server-side.
+ */
+export async function getAppliedPerDay() {
+  const res = await fetch(`${API_URL}/applications/applied-per-day`);
+  return handleResponse(res);
+}
+
 export async function getStatusHistory(id) {
   const res = await fetch(`${API_URL}/applications/${id}/history`);
   return handleResponse(res);

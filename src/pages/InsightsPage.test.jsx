@@ -20,9 +20,18 @@ const timeline = {
   opening_count: 2,
 };
 
+const appliedPerDay = {
+  series: [
+    { date: "2026-08-01", count: 2 },
+    { date: "2026-08-02", count: 0 },
+    { date: "2026-08-03", count: 3 },
+  ],
+};
+
 describe("InsightsPage", () => {
   beforeEach(() => {
     vi.spyOn(api, "getStatusTimeline").mockResolvedValue(timeline);
+    vi.spyOn(api, "getAppliedPerDay").mockResolvedValue(appliedPerDay);
   });
 
   afterEach(() => {
@@ -45,7 +54,7 @@ describe("InsightsPage", () => {
 
   it("offers a way back to the list", async () => {
     renderPage();
-    await screen.findByRole("img");
+    await screen.findAllByRole("img");
 
     // A link rather than history.back(): this screen is bookmarkable, so
     // there is not always a list behind it.
@@ -57,7 +66,7 @@ describe("InsightsPage", () => {
 
   it("puts the way out ahead of the title, as the detail screen does", async () => {
     renderPage();
-    await screen.findByRole("img");
+    await screen.findAllByRole("img");
 
     // The two screens disagreed about where "back" lives — right here, top
     // left there. Asserted as document order rather than a class, because what
@@ -73,7 +82,7 @@ describe("InsightsPage", () => {
 
   it("keeps the header top-aligned, so the toggle stays level with the link", async () => {
     renderPage();
-    await screen.findByRole("img");
+    await screen.findAllByRole("img");
 
     // Asserting the class, not the geometry: jsdom does not lay out, so it
     // cannot see that dropping this puts the toggle in the gap between the
@@ -86,6 +95,7 @@ describe("InsightsPage", () => {
 
   it("shows an empty state rather than empty axes", async () => {
     api.getStatusTimeline.mockResolvedValue({ series: [], opening_count: 0 });
+    api.getAppliedPerDay.mockResolvedValue({ series: [] });
     const { container } = renderPage();
 
     expect(await screen.findByText(/Nothing to chart yet/)).toBeInTheDocument();
@@ -94,6 +104,7 @@ describe("InsightsPage", () => {
 
   it("surfaces a failure instead of an empty chart", async () => {
     api.getStatusTimeline.mockRejectedValue(new Error("API is down"));
+    api.getAppliedPerDay.mockRejectedValue(new Error("API is down"));
     renderPage();
 
     expect(await screen.findByText("API is down")).toBeInTheDocument();
@@ -102,9 +113,53 @@ describe("InsightsPage", () => {
     expect(screen.queryByText(/Nothing to chart yet/)).not.toBeInTheDocument();
   });
 
+  describe("the second chart (KAN-90)", () => {
+    it("renders applications sent per day alongside the status chart", async () => {
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /applications sent per day/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /applications by status/i })
+      ).toBeInTheDocument();
+    });
+
+    it("loses one chart rather than the page when its endpoint fails", async () => {
+      // KAN-56's rule for the source filter, on a screen with two independent
+      // reads: losing one thing should lose that thing. Promise.all would
+      // have taken both charts down with either request.
+      api.getAppliedPerDay.mockRejectedValue(new Error("per-day is down"));
+      renderPage();
+
+      expect(await screen.findByText("per-day is down")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /applications by status/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: /applications sent per day/i })
+      ).toBeNull();
+    });
+
+    it("keeps the status chart when the per-day series is merely empty", async () => {
+      // Not the same empty case: history begins at the first record, but this
+      // chart needs one that was actually applied to, and most are not
+      // (KAN-31). A shortlist with nothing sent yet is not a failed load.
+      api.getAppliedPerDay.mockResolvedValue({ series: [] });
+      renderPage();
+
+      expect(
+        await screen.findByText(/No applications have been sent yet/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /applications by status/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Nothing to chart yet/)).toBeNull();
+    });
+  });
+
   it("carries the theme toggle, like every other screen", async () => {
     renderPage();
-    await screen.findByRole("img");
+    await screen.findAllByRole("img");
     expect(screen.getByRole("button", { name: /mode/i })).toBeInTheDocument();
   });
 });

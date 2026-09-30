@@ -24,6 +24,7 @@ vi.mock("./api/client.js", () => ({
   getStatusTimeline: vi
     .fn()
     .mockResolvedValue({ series: [], opening_count: 0 }),
+  getAppliedPerDay: vi.fn().mockResolvedValue({ series: [] }),
   createApplication: vi.fn(),
   updateApplication: vi.fn(),
   deleteApplication: vi.fn(),
